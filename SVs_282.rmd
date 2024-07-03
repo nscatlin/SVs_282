@@ -1,0 +1,2802 @@
+---
+title: "282_sv_types_from_B73_Oh43_SV_PAVs"
+author: "Nathan S. Catlin"
+date: "2023-07-26"
+output: html_document
+---
+
+Load Libraries
+```{r}
+# library(plyr)
+library(ggplot2)
+# library(reshape2)
+library(tidyr)
+library(tidyverse)
+library(ggpubr)
+library(devtools)
+# install_github("https://github.com/nscatlin/JosephsLabColors.git")
+library(JosephsLabColors)
+library(rstudioapi)
+library(ggbreak)
+
+```
+
+Set working directory to where this file is saved
+```{r}
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+```
+
+# Skip to line ~360 if you have already done lines here to ~360.  This will reduce your your runtime.
+Lets load data 
+
+```{r}
+all_282 <- read.csv("./test/SV_read_support_table_all_282_genotypes.tsv",
+                    header = TRUE, sep = "\t")
+gc()
+
+```
+
+Add column names
+
+```{r}
+# colnames(all_282) <- c('ID','sv_start','sv_end','sv_insertion_point_opp_genome_coords','sv_size','ref_genotype','ref_read_count_left','ref_read_count_right','ref_insertion_point_read_count','query_genotype','query_read_count_left','query_read_count_right','query_insertion_point_read_count','ref_minus_query_diff_left','ref_minus_query_diff_right','ref_minus_query_insertion_point')
+
+all_282_query_genotype <- all_282$query_genotype[all_282$query_genotype != 'query_genotype'] # save this var for later
+
+# Save these genotypes for later - gives a list of genotypes found in the dataset
+
+all_282_genotypes <- data.frame(unique(all_282_query_genotype[all_282_query_genotype != 'query_genotype']))
+colnames(all_282_genotypes) <- "282_genotypes"
+write.table(all_282_genotypes, "./test/all_282_genotypes.txt", row.names=FALSE, quote=FALSE)
+gc()
+# head(all_282[all_282$query_genotype == '33-16' , ], n=10)
+# all_282[all_282$ID == 'Oh43_chr1_3' & all_282$query_genotype == '33-16' , ]
+```
+
+Only look at B73 and Oh43 so we can filter later on
+
+```{r}
+b73_oh43_reads_to_b73_oh43_ins <- all_282 %>%
+  filter(query_genotype == "Oh43" | query_genotype == "B73")
+# b73_oh43_reads_to_b73_oh43_ins[1:5,]
+
+all_282_Oh43_query <- all_282 %>%
+  filter(query_genotype == 'Oh43')
+all_282_B73_query <- all_282 %>%
+  filter(query_genotype == 'B73')
+
+```
+
+Mapping ascertainment genotypes to each other to throw away unsupported SVs 
+
+## Stacked
+```{r}
+b73_oh43_left_juncs_stack <- b73_oh43_reads_to_b73_oh43_ins %>%
+  ggplot(aes(x = as.numeric(ref_minus_query_diff_left))) +
+  geom_bar(aes(fill = ref_genotype), position = "stack", width=1.0)+
+  scale_x_continuous(expand = c(0,0))+
+  scale_y_continuous(expand = c(0,0))+
+  # scale_y_break(c(15000, 100000))+
+  # color_palette(pal)+
+  # scale_fill_manual(values = josephs_palette("josephs_true"))+
+  xlim(-25,40)+
+  labs(x = "Difference in reads", y = "Number of junctions", title = "Left junctions")+
+  # xlab("Difference in reads")+
+  # ylab("Number of junctions")+
+  geom_vline(xintercept = 0, linetype="dotted", 
+             color = "red", linewidth=0.75)+
+  # ggtitle("Left junctions")+
+  # scale_fill_discrete(name = "Reference Genotype")++
+  scale_fill_manual(values=josephs_palette(n=2, name="josephs_colorblind"), name = "Reference Genotype")+
+  # theme_bw()+
+  # theme(text = element_text(family = "Arial"),
+  #       axis.text.x.top = element_blank(),
+  #       axis.ticks.x.top = element_blank(),
+  #       plot.title = element_text(hjust = 0.5, face = "bold"),
+  #       axis.text = element_text(size=12), 
+  #       axis.title = element_text(size =16),
+  #       legend.title = element_text(size = 14),
+  #       legend.text = element_text(size = 12))
+  #
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+      plot.background = element_rect(fill = "white"),  # Set plot background color to white
+      panel.background = element_rect(fill = "white"),
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks = element_line(size = 0.5),  # Customize tick marks
+      axis.ticks.length = unit(0.2, "cm"),
+      axis.text.x = element_text(color="black"),
+      axis.text.y = element_text(color="black"),
+      axis.text = element_text(size=12), 
+      axis.title = element_text(size =14),
+      legend.title = element_text(size = 14),
+      legend.text = element_text(size = 12),
+      plot.margin = margin(1,1,1.5,1.2, "cm"))
+
+b73_oh43_right_juncs_stack <- b73_oh43_reads_to_b73_oh43_ins %>%
+  ggplot(aes(x = as.numeric(ref_minus_query_diff_right))) +
+  geom_bar(aes(fill = ref_genotype), position = "stack",  width=1.0)+
+  scale_x_continuous(expand = c(0,0))+
+  scale_y_continuous(expand = c(0,0))+
+  # scale_y_break(c(15000, 100000))+
+  xlim(-25,40)+
+  xlab("Difference in reads")+
+  ylab("Number of junctions")+
+  geom_vline(xintercept = 0, linetype="dotted", 
+             color = "red", linewidth=0.75)+
+  ggtitle("Right junctions")+
+  # scale_fill_discrete(name = "Reference Genotype")+
+  scale_fill_manual(values=josephs_palette(n=2, name="josephs_colorblind"), name = "Reference Genotype")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+      plot.background = element_rect(fill = "white"),  # Set plot background color to white
+      panel.background = element_rect(fill = "white"),
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks = element_line(size = 0.5),  # Customize tick marks
+      axis.ticks.length = unit(0.2, "cm"),
+      axis.text.x = element_text(color="black"),
+      axis.text.y = element_text(color="black"),
+      axis.text = element_text(size=12), 
+      axis.title = element_text(size =14),
+      legend.title = element_text(size = 14),
+      legend.text = element_text(size = 12),
+      plot.margin = margin(1,1,1.5,1.2, "cm"))
+
+b73_oh43_left_juncs_stack_gray <- b73_oh43_left_juncs_stack + scale_fill_grey(name = "Reference Genotype")
+
+b73_oh43_right_juncs_stack_gray <- b73_oh43_right_juncs_stack + scale_fill_grey(name = "Reference Genotype")  
+
+figure <- ggarrange(b73_oh43_left_juncs_stack_gray + rremove("ylab") + rremove("xlab"), b73_oh43_right_juncs_stack_gray + rremove("ylab") + rremove("xlab"),nrow=1, ncol=2, common.legend = TRUE, legend = "right")
+```
+
+Print out read difference plots
+```{r}
+library(grid)
+png("/home/nathan/Desktop/github/282/test/B73_Oh43_read_diff_right_left_juncs_stacked_gray.png", width = 8, height = 6 , res = 400, units = "in")
+annotate_figure(figure, left = textGrob("Number of junctions", rot = 90, vjust = 1, gp = gpar(cex = 1.3)),
+                    bottom = textGrob("Difference in read mapping", gp = gpar(cex = 1.3), hjust = 0.8))
+dev.off()
+
+png("./test/B73_Oh43_read_diff_right_left_juncs_stacked.png", width = 10, height = 10 , res = 400, units = "in")
+ggarrange(b73_oh43_left_juncs_stack, b73_oh43_right_juncs_stack,nrow=1, ncol=2, common.legend = TRUE, legend = "right")
+dev.off()
+
+# png("./test/B73_Oh43_read_diff_right_left_juncs_stacked_gray.png", width = 10, height = 10 , res = 400, units = "in")
+# ggarrange(b73_oh43_left_juncs_stack_gray, b73_oh43_right_juncs_stack_gray,nrow=1, ncol=2, common.legend = TRUE, legend = "right")
+# dev.off()
+```
+
+## Dodge
+
+```{r}
+b73_oh43_left_juncs_dodge <- b73_oh43_reads_to_b73_oh43_ins %>%
+  ggplot(aes(x = as.numeric(ref_minus_query_diff_left))) +
+  geom_bar(aes(fill = ref_genotype), position = "dodge", width=1.0)+
+  xlim(-15,25)+
+  xlab("Difference in reads")+
+  ylab("Number of junctions")+
+  geom_vline(xintercept = 0, linetype="dotted", 
+             color = "red", linewidth=0.75)+
+  ggtitle("Left junctions")+
+  # scale_fill_discrete(name = "Reference Genotype")+
+  scale_fill_manual(values=josephs_palette(n=2, name="josephs_colorblind"), name = "Reference Genotype")
+# +
+#   theme(axis.text=element_text(size=20),
+#         axis.title=element_text(size=15,face="bold"),
+#         plot.title = element_text(hjust = 0.5, size = 25))
+
+b73_oh43_right_juncs_dodge <- b73_oh43_reads_to_b73_oh43_ins %>%
+  ggplot(aes(x = as.numeric(ref_minus_query_diff_right))) +
+  geom_bar(aes(fill = ref_genotype), position = "dodge", width=1.0)+
+  # geom_histogram(bins=100)+
+  # # ylim(c(0,2))+
+  # scale_colour_gradient2(
+  #   low = "red",
+  #   mid = "green",
+  #   high = "blue",
+  #   midpoint = 10)+ # mean of cov_diff column
+  # ylim(0,100)+
+  xlim(-15,25)+
+  xlab("Difference in reads")+
+  ylab("Number of junctions")+
+  geom_vline(xintercept = 0, linetype="dotted", 
+             color = "red", linewidth=0.75)+
+  ggtitle("Right junctions")+
+  # scale_fill_discrete(name = "Reference Genotype")+
+  scale_fill_manual(values=josephs_palette(n=2, name="josephs_colorblind"), name = "Reference Genotype")
+# +
+#   theme(
+#     axis.text = element_text(size = 20),
+#     axis.title = element_text(size = 15, face = "bold"),
+#     plot.title = element_text(hjust = 0.5, size = 25)
+#   )
+
+ggarrange(b73_oh43_left_juncs_dodge,b73_oh43_right_juncs_dodge,nrow=2, ncol=1)
+
+```
+
+If you wanted to save the images, along with some legend information, here is the code for that
+```{r}
+# b73_oh43_left_juncs_stack_nolegend <- b73_oh43_left_juncs_stack + theme(legend.position = "none")
+#
+# b73_oh43_right_juncs_stack_legend_adjust <- b73_oh43_right_juncs_stack + theme(legend.title=element_text(size=20),legend.text=element_text(size=15))
+# b73_oh43_left_juncs_stack_legend_adjust <- b73_oh43_left_juncs_stack + theme(legend.title=element_text(size=20),legend.text=element_text(size=15))
+#
+# png("./test/B73_Oh43_read_diff_right_juncs_stacked.png", width = 10, height = 10 , res = 400, units = "in")
+# ggarrange(b73_oh43_left_juncs_stack_legend_adjust, b73_oh43_right_juncs_stack_legend_adjust, ncol = 1, nrow = 2 , common.legend = TRUE, legend = "right")
+# dev.off()
+#
+# # png("B73_Oh43_read_diff_left_juncs_stacked.png", width = 100, height = 1000)
+# # b73_oh43_left_juncs_stack
+# # dev.off()
+#
+# # png("B73_Oh43_read_diff_left_and_right_juncs_stacked.png", width = 1500, height = 700)
+# # ggarrange(b73_oh43_left_juncs_stack_nolegend, b73_oh43_right_juncs_stack_legend_adjust, nrow=1, ncol=2)
+# # dev.off()
+```
+
+# Filtering
+
+### This is where I need to make new categories for 'insertion present', 'insertion absent', and 'NA' for cases where we do not know with confidence.
+
+ Filtering SV -present and absent alleles based on how the ascertainment set (B73 and Oh43) maps to its own SV-present alleles and correspoding insertion points and the the opp genotypes SVs and insertion points
+
+Here I am using a separate dataframe for only B73 and Oh43 (the ascertainment set) reads to all alleles. It's very difficult to handle Oh43 and B73 query genotypes because of the way I wrote the original script to handle all other genotypes.
+
+The below dataframes were created from the following script:
+python difference_reads_spanning_sv_junctions_insertion_point_NAM_genotypes_to_B73_Oh43_insertions_B73_and_Oh43_ONLY.py B73 > B73_query.bed
+python difference_reads_spanning_sv_junctions_insertion_point_NAM_genotypes_to_B73_Oh43_insertions_B73_and_Oh43_ONLY.py Oh43 > B73_query.bed
+```{r}
+
+Oh43_query_df <- read.csv("/home/nathan/Desktop/MSU/maize/diff_read_spanning_juncs/282_reads_align_B73_Oh43_all_alleles/Oh43_query.bed", header = FALSE)
+B73_query_df <- read.csv("/home/nathan/Desktop/MSU/maize/diff_read_spanning_juncs/282_reads_align_B73_Oh43_all_alleles/B73_query.bed", header = FALSE)
+colnames(Oh43_query_df) <- c("ID", "sv_start", "sv_end", "sv_insertion_point_opp_genome_coords", "sv_size","sv_present_genotype",  "sv_absent_genotype", "ref_read_count_left", "ref_read_count_right", "sv_present_genotype_insertion_point_mapping", "sv_absent_genotype_insertion_point_mapping", "query_genotype", "query_read_count_left", "query_read_count_right", "query_insertion_point_read_count","ref_minus_query_diff_left", "ref_minus_query_diff_right", "sv_absent_minus_query_insertion_point"
+)
+colnames(B73_query_df) <- c("ID", "sv_start", "sv_end", "sv_insertion_point_opp_genome_coords", "sv_size","sv_present_genotype", "sv_absent_genotype", "ref_read_count_left", "ref_read_count_right", "sv_present_genotype_insertion_point_mapping",  "sv_absent_genotype_insertion_point_mapping", "query_genotype", "query_read_count_left", "query_read_count_right", "query_insertion_point_read_count","ref_minus_query_diff_left", "ref_minus_query_diff_right", "sv_absent_minus_query_insertion_point"
+)
+
+head(all_282)
+head_B73_query_df<- head(B73_query_df)
+head_B73_query_df_all_282_check <- all_282 %>% 
+  filter(ID %in% head_B73_query_df$ID, ref_genotype == "Oh43", query_genotype == "B73" )
+
+
+Oh43_sample <- Oh43_query_df %>%
+  select(ID, query_genotype, ref_read_count_left, ref_read_count_right, query_read_count_left, query_read_count_right, sv_present_genotype_insertion_point_mapping, sv_absent_genotype_insertion_point_mapping) %>% 
+  head(n=10)
+
+Oh43_sample_2 <- B73_query_df %>%
+  select(ID, query_genotype, ref_read_count_left, ref_read_count_right, query_read_count_left, query_read_count_right, sv_present_genotype_insertion_point_mapping, sv_absent_genotype_insertion_point_mapping) %>% 
+  head(n=10)
+
+Oh43_sample_dataset <- rbind(Oh43_sample, Oh43_sample_2)
+
+# Filtering
+Oh43_ins_B73_reads <- B73_query_df %>% 
+  filter(sv_present_genotype == 'Oh43') %>% 
+  filter(ref_read_count_left > 0 & ref_read_count_right > 0 & ref_minus_query_diff_left >= 0 & ref_minus_query_diff_right >= 0 & sv_present_genotype_insertion_point_mapping == 0 & sv_absent_genotype_insertion_point_mapping> 0 ) 
+
+B73_ins_Oh43_reads <- Oh43_query_df %>%
+  filter(sv_present_genotype == 'B73') %>% 
+  filter(ref_read_count_left > 0 & ref_read_count_right > 0 & ref_minus_query_diff_left >= 0 & ref_minus_query_diff_right >= 0 & sv_present_genotype_insertion_point_mapping == 0 & sv_absent_genotype_insertion_point_mapping> 0 ) 
+
+
+B73_Oh43_retain_these_sv_present_alleles <- rbind(Oh43_ins_B73_reads, B73_ins_Oh43_reads) # these are the PAVs for B73 and Oh43 based on your filtering.  You will want to remove B73 and Oh43 from the filtering below becasue you have already done that here
+
+retain_these_sv_present_allele_ids <- rbind(Oh43_ins_B73_reads, B73_ins_Oh43_reads) %>% 
+  pull(unique(ID))
+
+filtered_out_svs <- setdiff(Oh43_query_df$ID,retain_these_sv_present_allele_ids)
+
+retain_these_sv_present_allele_ids <- as.list(retain_these_sv_present_allele_ids)
+
+filtered_out_svs <- as.list(filtered_out_svs)
+
+## Uncomment lines belows to write dataframes to list of IDs to files ##
+
+# library(data.table)
+# setDT(retain_these_sv_present_allele_ids)
+# setDT(filtered_out_svs)
+# 
+# write.table(retain_these_sv_present_allele_ids, './retained_SVs_post_filtering.txt',row.names=FALSE, col.names = FALSE, quote=FALSE)
+# 
+# write.table(filtered_out_svs, './filtered_out_svs.txt',row.names=FALSE, col.names = FALSE, quote=FALSE)
+
+
+gc()
+```
+
+Now filtering the other 282 genotypes
+```{r}
+SV_present <- all_282 %>% 
+  filter(query_genotype != 'Oh43' & query_genotype != 'B73') %>% 
+  filter(ID %in% retain_these_sv_present_allele_ids) %>%
+  filter((query_read_count_left > 0 & query_read_count_right >= 0) | 
+           (query_read_count_left >= 0 & query_read_count_right > 0)) %>% 
+        filter(query_insertion_point_read_count == 0)
+SV_present['type'] = 'SV_present'
+
+gc()
+
+SV_absent <- all_282 %>%
+  filter(query_genotype != 'Oh43' & query_genotype != 'B73') %>% 
+  filter(ID %in% retain_these_sv_present_allele_ids) %>%
+  filter((query_read_count_left == 0 & query_read_count_right == 0) & 
+           (query_insertion_point_read_count > 0 ))
+SV_absent['type'] = 'SV_absent'
+# 
+gc()
+
+
+SV_NA <- all_282 %>% 
+  filter(query_genotype != 'Oh43' & query_genotype != 'B73') %>% 
+  filter(ID %in% retain_these_sv_present_allele_ids) %>%
+  filter((query_read_count_left > 0 & query_read_count_right >= 0) |
+           (query_read_count_left >= 0 & query_read_count_right > 0)) %>% 
+           filter(query_insertion_point_read_count > 0)
+SV_NA['type'] = 'SV_NA'
+
+gc()
+
+
+all_282_SV_types <- rbind(SV_present, SV_absent, SV_NA)
+
+gc()
+
+
+rm(all_282) # don't need this df anymore
+
+gc()
+
+length_all_282_sv_types <- all_282_SV_types %>%
+select(query_genotype) %>% 
+unique()
+
+
+
+```
+
+Write to tables to local computer in case you want to have everything you need in long table format.
+
+It might be best here to write to a table because your R session might run out of memory. Might as well write to a table so you can just reupload just this one df
+```{r}
+# write.table(SV_present, "~/Desktop/MSU/maize/diff_read_spanning_juncs/all_282_difference_reads_spanning_sv_junctions_insertion_point_NAM_genotypes_to_B73_Oh43_insertions_SV_present.tsv", sep = '\t', row.names=FALSE, quote=FALSE)
+# write.table(SV_absent, "~/Desktop/MSU/maize/diff_read_spanning_juncs/all_282_difference_reads_spanning_sv_junctions_insertion_point_NAM_genotypes_to_B73_Oh43_insertions_SV_absent.tsv", sep = '\t', row.names=FALSE, quote=FALSE)
+# write.table(SV_NA, "~/Desktop/MSU/maize/diff_read_spanning_juncs/all_282_difference_reads_spanning_sv_junctions_insertion_point_NAM_genotypes_to_B73_Oh43_insertions_SV_NA.tsv", sep = '\t', row.names=FALSE, quote=FALSE)
+
+write.table(all_282_SV_types, "./test/all_282_difference_reads_spanning_sv_junctions_insertion_point_NAM_genotypes_to_B73_Oh43_insertions_SV_all_types_noIDline.tsv", sep = '\t', row.names=FALSE, quote=FALSE)
+
+
+```
+
+Now I want to make a bimbam file format from the SVs passing filtering
+
+Trying to reshape the 'all_282_SV_types' df to make it easier to parse.  If I were to directly try to make a bimbam from it, it's overly complicated and takes too much RAM
+
+```{r}
+all_282_SV_types <- read.csv("./test/all_282_difference_reads_spanning_sv_junctions_insertion_point_NAM_genotypes_to_B73_Oh43_insertions_SV_all_types_noIDline.tsv", sep = '\t')
+
+all_282_SV_types$bimbam <-  case_when(all_282_SV_types$type == "SV_present" ~ '2',
+                          all_282_SV_types$type == "SV_absent" ~ '0',
+                          all_282_SV_types$type == "SV_NA" ~ 'NA')
+
+all_282_SV_types_only_ID_qg_type <- all_282_SV_types %>%
+  select(ID, query_genotype, bimbam)
+
+all_282_SV_types_only_ID_qg_type_wide <- all_282_SV_types_only_ID_qg_type %>% 
+  select("ID", "query_genotype", "bimbam") %>% 
+  pivot_wider(names_from = query_genotype, values_from = bimbam) 
+
+
+
+
+all_282_SV_types_only_ID_qg_type_wide$minor_allele <- "T"
+all_282_SV_types_only_ID_qg_type_wide$major_allele <- "A"
+all_282_SV_types_only_ID_qg_type_wide[is.na(all_282_SV_types_only_ID_qg_type_wide)] = "NA"
+# bimbam_file <- all_282_SV_types_only_ID_qg_type_wide
+
+gc()
+new_data_order <- all_282_SV_types_only_ID_qg_type_wide[, c(1,(ncol(all_282_SV_types_only_ID_qg_type_wide)-1),(ncol(all_282_SV_types_only_ID_qg_type_wide)),2:(ncol(all_282_SV_types_only_ID_qg_type_wide)-2))]
+# test <- colnames(new_data_order)
+
+# Add B73 and Oh43 back into the df
+new_data_order$B73 <- ifelse(grepl("B73", new_data_order$ID), 2, 0)
+new_data_order$Oh43 <- ifelse(grepl("Oh43", new_data_order$ID), 2, 0)
+
+
+# Let's change the IDs back to the old version of IDs so there is more info for each ID
+sv_dict <- read.csv("./data/SV_insertion_IDs_dictionary_with_new_IDs.txt",
+                    header = FALSE )
+bimbam_ordered_merged_old_ids <- merge(new_data_order, sv_dict, by.x = "ID", by.y = "V2", all.x = TRUE)
+
+# Rearrange dataframe and to make the old version IDs as the IDs we use for the bimbam table
+bimbam_ordered_merged_old_ids_rearranged <- bimbam_ordered_merged_old_ids[, c(length(bimbam_ordered_merged_old_ids), 2:(length(bimbam_ordered_merged_old_ids)-1))]
+
+# Change the column name back to 'ID'
+names(bimbam_ordered_merged_old_ids_rearranged)[1] <- "ID"
+```
+
+Writing to table bimbam files (one with header and one without)
+```{r}
+# with header
+write.table(bimbam_ordered_merged_old_ids_rearranged, "./test/bimbam_282_w_header_oldIDs_20240609.csv", sep = ',', row.names=FALSE, col.names=TRUE, quote=FALSE)
+# without header
+write.table(bimbam_ordered_merged_old_ids_rearranged, "./test/bimbam_282_wo_header_oldIDs_20240609.csv", sep = ',', row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
+
+Let's see what genotypes are excluded from the filtered dataset
+```{r}
+all_282_genotypes <- read.table("./test/all_282_genotypes.txt", header = TRUE)
+num_of_genotypes_left_after_filtering <- length(intersect(colnames(new_data_order[-1:-3]), all_282_genotypes$X282_genotypes))
+
+num_of_genotypes_to_start <- nrow(all_282_genotypes)
+
+
+print(paste('Num of genotypes removed through filtering steps: ', num_of_genotypes_to_start - num_of_genotypes_left_after_filtering ))
+# this will print off genotypes that get filtered out 
+
+genotypes_filtered_out <- data.frame("genotypes_filtered" = character(0))
+for (x in all_282_genotypes$X282_genotypes){
+  if (!any(grepl(x, colnames(new_data_order)))){
+    new_row <- data.frame("genotypes_filtered" = x)
+    
+    # Append the new row to the dataframe
+    genotypes_filtered_out <- rbind(genotypes_filtered_out, new_row)
+  }
+}
+
+
+# num_of_genotypes_left_after_filtering <- length(intersect(colnames(new_data_order[-1:-3]), unique(all_282_query_genotype[all_282_query_genotype != 'query_genotype'])))
+# 
+# num_of_genotypes_to_start <- length(unique(all_282_query_genotype[all_282_query_genotype != 'query_genotype']))
+# 
+# print(paste('Num of genotypes removed through filtering steps: ', num_of_genotypes_to_start - num_of_genotypes_left_after_filtering ))
+# # this will print off genotypes that get filtered out 
+# for (x in unique(all_282_query_genotype[all_282_query_genotype != 'query_genotype'])){
+#   if (!any(grepl(x, colnames(new_data_order)))){
+#   cat(paste(x,"\n"))
+#   }
+# }
+```
+
+```{r}
+
+gc()
+
+##############################################################################################
+##############################################################################################
+bimbam_file <- new_data_order
+first_three_columns_bimbam <- bimbam_file[,c('ID', 'minor_allele', 'major_allele')]
+
+# Reorder genotypes
+reordered_bimbam_genotypes <- bimbam_file[,c(sort(colnames(bimbam_file[,colnames(bimbam_file[,!names(bimbam_file) %in% colnames(first_three_columns_bimbam)])])))]
+
+# Put in the first three columns on the bimbam file
+bimbam_ordered <- cbind(first_three_columns_bimbam, reordered_bimbam_genotypes)
+
+
+# Let's change the IDs back to the old version of IDs so there is more info for each ID
+sv_dict <- read.csv("./test/SV_insertion_IDs_dictionary_with_new_IDs.txt",
+                    header = FALSE )
+bimbam_ordered_merged_old_ids <- merge(bimbam_ordered, sv_dict, by.x = "ID", by.y = "V2", all.x = TRUE)
+
+# Rearrange dataframe and to make the old version IDs as the IDs we use for the bimbam table
+bimbam_ordered_merged_old_ids_rearranged <- bimbam_ordered_merged_old_ids[, c(length(bimbam_ordered_merged_old_ids), 2:(length(bimbam_ordered_merged_old_ids)-1))]
+
+# Change the column name back to 'ID'
+names(bimbam_ordered_merged_old_ids_rearranged)[1] <- "ID"
+```
+
+# Double checking previously problematic genotype
+```{r}
+bimbam_ordered_merged_old_ids_rearranged <- read.csv("./test/bimbam_282_w_header_oldIDs_20240609.csv", header=TRUE)
+sv_dict <- read.csv("./test/SV_insertion_IDs_dictionary_with_new_IDs.txt",
+                    header = FALSE )
+gemma_ann_file <- read.table("~/Desktop/github/282/test/gemma_annotation_nodups_sorted.txt", sep=',', header = FALSE)
+colnames(gemma_ann_file) <- c("SV_ID", "b73_position", "chr")
+gemma_ann_file$chr <- as.numeric(as.character(gemma_ann_file$chr))
+gemma_ann_file$b73_position <- as.numeric(as.character(gemma_ann_file$b73_position))
+
+# CML61_SV_types_old_ids <- merge(CML61_SV_types, sv_dict, by.x = "ID", by.y = "V2", all.x = TRUE)
+bimbam_w_chrs_b73_pos <- merge(bimbam_ordered_merged_old_ids_rearranged, gemma_ann_file, by.x = "ID", by.y = "SV_ID", all.x = TRUE)
+
+
+
+bimbam_w_chrs_b73_pos_neworder <-bimbam_w_chrs_b73_pos[,c(ncol(bimbam_w_chrs_b73_pos),(ncol(bimbam_w_chrs_b73_pos)-1),1:(ncol(bimbam_w_chrs_b73_pos)-2))]# %>%
+  # select(-c(ID)) %>%
+  # rename('ID'='V1')
+
+for (x in 1:10){
+bimbam_w_chrs_b73_pos_neworder %>%
+  select(chr, b73_position, CML61) %>% 
+  filter(CML61 == 2 | CML61 == 0, chr == x, b73_position > 113071726) %>%
+  tail %>% 
+  print()
+}
+
+```
+
+Lets see the breakdown in SV by type in the final sv set(in bimbam format)
+```{r}
+sv_categories <- read.csv("~/Desktop/github/282/scripts/sv_categories.csv", header = TRUE)
+
+
+sv_categories <- sv_categories %>% 
+    mutate(category = case_when(
+      category == "Category_1"~ "No TE SV",
+      category == "Category_2"~ "Incomplete TE SV",
+      category == "Category_3"~ "TE = SV",
+      category == "Category_4"~ "Multi TE SV",
+      category == "Category_5"~ "TE Within SV",
+      TRUE~category
+    ))
+
+
+bimbam_ordered_merged_old_ids_rearranged_sv_cats <- sv_categories %>% 
+  filter(sv_id %in% bimbam_ordered_merged_old_ids_rearranged$ID)
+
+# Proportions of Sv cats in final dataset
+
+cat("No TE SV")
+nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "No TE SV",])
+(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "No TE SV",]))/(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats)) * 100
+
+cat("Incomplete TE SV")
+nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "Incomplete TE SV",])
+(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "Incomplete TE SV",]))/(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats)) * 100
+cat("TE = SV")
+nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "TE = SV",])
+(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "TE = SV",]))/(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats)) * 100
+cat("Multi TE SV")
+nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "Multi TE SV",])
+(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "Multi TE SV",]))/(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats)) * 100
+
+cat("TE Within SV")
+nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "TE Within SV",])
+(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats[bimbam_ordered_merged_old_ids_rearranged_sv_cats$category == "TE Within SV",]))/(nrow(bimbam_ordered_merged_old_ids_rearranged_sv_cats)) * 100
+
+
+```
+
+
+Now, let's just load in the bimbam file we made (start here for the future if you have already done everything above)
+
+# Phenotypes - Peiffer dataset
+```{r}
+
+bimbam_ordered <- read.csv("./test/bimbam_282_w_header_oldIDs_20240609.csv", header=TRUE)
+bimbam_ordered$minor_allele <- 'T' # reading in the csv causes the T to turn into "TRUE" and I don't want to go through the trouble of explicitly stating classes for each column
+
+peiffer_blups <- read.csv("./test/282_Peiffer2014Genetics_blupPhenos20150325.csv", sep='\t', header=TRUE)
+
+# Need to be careful because some genotypes start with numbers, which R does not like
+# In order to accommodate this, go into your phenotype table and edit the genotypes starting with numbers to append an 'X' on the front
+# Also need to convert dashes (-) with periods (.) since R does not like periods in colnames, which we use later on in ordering genotypes and phenotypes
+
+peiffer_blups$Family_Inbred_Name <- gsub('(^[0-9])', 'X\\1', peiffer_blups$Family_Inbred_Name)
+peiffer_blups$Family_Inbred_Name <- gsub('-', '.', peiffer_blups$Family_Inbred_Name)
+peiffer_blups$Family_Inbred_Name <- tolower(peiffer_blups$Family_Inbred_Name)
+names(bimbam_ordered) <- tolower(names(bimbam_ordered))
+gc()
+
+peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide <- peiffer_blups[peiffer_blups$Family_Inbred_Name %in% (intersect(colnames(bimbam_ordered[-1:-3]), peiffer_blups$Family_Inbred_Name)),]
+
+# Now, need to make sure the phenotypes in the peiffer dataset are also in the bimbam
+
+matching_bimbam_to_peiffer_phenotype <- cbind(bimbam_ordered[1:3], bimbam_ordered[,(intersect(colnames(bimbam_ordered[-1:-3]), peiffer_blups$Family_Inbred_Name))])
+
+
+
+# Sorting bimbam file
+matching_bimbam_to_peiffer_phenotype_ordered <- cbind(bimbam_ordered[1:3], matching_bimbam_to_peiffer_phenotype[,sort(colnames(matching_bimbam_to_peiffer_phenotype[-1:-3]))])
+
+
+# Sorting the phenotype file
+peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide_ordered <- peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide[match(colnames(matching_bimbam_to_peiffer_phenotype_ordered[-1:-3]),peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide$Family_Inbred_Name),]
+
+
+```
+
+Write the new ordered phenotype file with necessary columns and the matching bimbam file (with and without header so you can reference back to it if you want)
+
+```{r}
+# Writing entire phenotype file WITH unneeded fields for GEMMA
+write.table(peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide_ordered, "./test/282_Peiffer2014Genetics_phenotype_w_extra_fields_20240609.tsv", sep = '\t', row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+# Writing phenotype file WITHOUT unneeded fields for GEMMA
+write.table(peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide_ordered[-1:-5], "./test/282_Peiffer2014Genetics_phenotype_wo_extra_fields_20240609.tsv", sep = '\t', row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+# Writing bimbam file (with genotype header)
+write.table(matching_bimbam_to_peiffer_phenotype_ordered, "./test/282_Peiffer2014Genetics_bimbam_w_header_20240609.csv", sep = ',', row.names=FALSE, col.names=TRUE, quote=FALSE)
+
+# Writing bimbam file --> for GEMMA
+write.table(matching_bimbam_to_peiffer_phenotype_ordered, "./test/282_Peiffer2014Genetics_bimbam_20240609.csv", sep = ',', row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
+# HapMap SNP dataset --> doing this in python turned out to be a lot easier and I went that route-- check hapmap321_genotypes_to_extract_peiffer_phenotypes.py
+
+
+
+
+```{r}
+hapmap321_genotypes_intersect_peiffer <- read.table("./test/hapmap321_all_chrs_peiffer_intersection_genos_picard_liftovervcf_v3_to_v4_to_v5NAM.vcf.gz_genotypes_wo_282set_GoodmanBuckler.txt", header = FALSE)
+names(hapmap321_genotypes_intersect_peiffer) <- "hapmap321_peiffer_genotypes"
+hapmap321_genotypes_intersect_peiffer$hapmap321_peiffer_genotypes <- gsub('(^[0-9])', 'X\\1', hapmap321_genotypes_intersect_peiffer$hapmap321_peiffer_genotypes)
+hapmap321_genotypes_intersect_peiffer$hapmap321_peiffer_genotypes <- gsub('-', '.', hapmap321_genotypes_intersect_peiffer$hapmap321_peiffer_genotypes)
+hapmap321_genotypes_intersect_peiffer$hapmap321_peiffer_genotypes <- tolower(hapmap321_genotypes_intersect_peiffer$hapmap321_peiffer_genotypes)
+
+
+bimbam_peiffer <- read.csv("./test/282_Peiffer2014Genetics_bimbam_w_header_20240609.csv", header=TRUE)
+colnames(bimbam_peiffer[,c(-1:-3)]) <- tolower(colnames(bimbam_peiffer[,c(-1:-3)]))
+
+
+# Convert the order column in df1 to lowercase
+hapmap321_genotypes_intersect_peiffer$hapmap321_peiffer_genotypes <- tolower(hapmap321_genotypes_intersect_peiffer$hapmap321_peiffer_genotypes)
+
+# Extract the order of columns from df1
+ordered_columns <- hapmap321_genotypes_intersect_peiffer$hapmap321_peiffer_genotypes
+
+# Ensure that the ordered_columns exist in df2
+ordered_columns <- ordered_columns[ordered_columns %in% colnames(bimbam_peiffer)]
+
+# Reorder df2 based on the order specified in ordered_columns
+bimbam_peiffer_reordered <- bimbam_peiffer %>%
+  select(all_of(ordered_columns))
+
+bimbam_peiffer_reordered_FINAL <- cbind(bimbam_peiffer[1:3],bimbam_peiffer_reordered)
+```
+
+Write out bimbam that matches the order of hapmap vcf - Then you will have to just cp and paste the genotypes from the hapmapvcf to the bimbam so you can use bcftools to concatenate the hapmap vcf with the bimbam vcf (after bimbam to vcf conversion)  
+```{r}
+write.table(bimbam_peiffer_reordered_FINAL, "./test/bimbam_genotypes_match_hapmap321_vcf_order_w_header.csv", sep = ',', row.names=FALSE, col.names=TRUE, quote=FALSE)
+
+write.table(bimbam_peiffer_reordered_FINAL, "./test/bimbam_genotypes_match_hapmap321_vcf_order_wo_header.csv", sep = ',', row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+```
+
+
+
+Delete the blocks below pertaining to hapmap321
+```{r}
+
+hapmap321_genotypes <- read.table("./test/hapmap321_all_chrs_all_hapmap_genos_picard_liftovervcf_v3_to_v4_to_v5NAM.vcf_genotypes.txt", header =FALSE)
+names(hapmap321_genotypes) <- "genotypes"
+
+# First, lets only look at the genotypes that have 282set_ or Goodman-Buckler in the name --> those are the ones we are giving priority to
+remove_these_substrings <- c("282set_","Goodman-Buckler")
+
+hapmap321_genotypes_w_282set_GoodmanBuckler <- subset(hapmap321_genotypes, grepl(paste(remove_these_substrings, collapse = "|"), genotypes))
+
+
+
+# Some genotypes in HapMap321 dataset have both (282set_GENOTYPE.* or 282set_GENOTYPE_Goodman-Buckler) and GENOTYPE, so remove the ones that are just GENOTYPE
+
+# remove_these_genotypes <- c("De811", "IA5125", "MO18W", "Oh7B")
+
+ 
+# hapmap321_genotypes_282set_GoodmanBuckler_dict_282set <- hapmap321_genotypes %>% 
+#   filter(str_detect(genotypes,"282set_")) %>% 
+#  mutate(genotypes_no282set_GoodmanBuckler = str_replace(genotypes, "282set_", ""))
+
+
+hapmap321_genotypes_282set_GoodmanBuckler_dict <- hapmap321_genotypes_w_282set_GoodmanBuckler %>%
+  mutate(has_substrings = ifelse(str_detect(genotypes, remove_these_substrings[1]) | str_detect(genotypes, remove_these_substrings[2]), "Yes", "No"),
+         genotypes_no282set_GoodmanBuckler = ifelse(has_substrings == "Yes", str_replace_all(genotypes, paste0(remove_these_substrings[1], "|", remove_these_substrings[2]), ""), genotypes)) %>% 
+select(genotypes, genotypes_no282set_GoodmanBuckler)
+rownames(hapmap321_genotypes_282set_GoodmanBuckler_dict) <- NULL
+
+# Original hapmap321 df
+hapmap321_genotypes_dict <- hapmap321_genotypes %>%
+  mutate(has_substrings = ifelse(str_detect(genotypes, remove_these_substrings[1]) | str_detect(genotypes, remove_these_substrings[2]), "Yes", "No"),
+         genotypes_no282set_GoodmanBuckler = ifelse(has_substrings == "Yes", str_replace_all(genotypes, paste0(remove_these_substrings[1], "|", remove_these_substrings[2]), ""), genotypes)) %>% 
+select(genotypes, genotypes_no282set_GoodmanBuckler)
+rownames(hapmap321_genotypes_dict) <- NULL
+
+hapmap321_genotypes_dict$no_282set_GoodmanBuckler_lower <- tolower(hapmap321_genotypes_dict$genotypes_no282set_GoodmanBuckler)
+
+###
+# We might not have to run the below code if all (282set_GENOTYPE or 282set_GENOTYPEGoodman-Buckler are found in Peiffer... checking below
+###
+# for (string in hapmap321_genotypes$genotypes) {
+#   # Check if the string exists in Column1
+#   if (!(tolower(string) %in% tolower(hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes))) {
+#     # Add the string to the DataFrame
+#     hapmap321_genotypes_282set_GoodmanBuckler_dict <- rbind(hapmap321_genotypes_282set_GoodmanBuckler_dict, data.frame(genotypes_no282set_GoodmanBuckler = NA, genotypes = string, stringsAsFactors = FALSE))
+#   }
+# }
+# 
+# # Reset row names
+# rownames(hapmap321_genotypes_282set_GoodmanBuckler_dict) <- NULL
+# 
+# hapmap321_genotypes_282set_GoodmanBuckler_dict <- hapmap321_genotypes_282set_GoodmanBuckler_dict %>%
+#   mutate(has_substrings = ifelse(str_detect(genotypes, remove_these_substrings[1]) | str_detect(genotypes, remove_these_substrings[2]), "Yes", "No"),
+#          genotypes_no282set_GoodmanBuckler = ifelse(has_substrings == "Yes", str_replace_all(genotypes, paste0(remove_these_substrings[1], "|", remove_these_substrings[2]), ""), genotypes)) %>% 
+# select(genotypes, genotypes_no282set_GoodmanBuckler)
+# 
+
+
+
+# 
+# 
+# hapmap321_genotypes_282set_GoodmanBuckler_dict <- hapmap321_genotypes_282set_GoodmanBuckler_dict[!(hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes %in% remove_these_genotypes),]
+# 
+
+
+hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler <- gsub('(^[0-9])', 'X\\1', hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler)
+hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler <- gsub('-', '.', hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler)
+
+
+# common_columns <- intersect(tolower(names(bimbam_ordered[,-c(1:3)])), tolower(hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler))
+
+
+
+
+
+
+# unique_columns_bimbam_ordered<- setdiff(tolower(names(bimbam_ordered[,-c(1:3)])), tolower(hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler))
+# 
+# unique_columns_hapmap321_genotypes <- setdiff(hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler, names(bimbam_ordered[,-c(1:3)]))
+# 
+# unique_columns_hapmap321_genotypes_lower <- setdiff(tolower(hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler), tolower(names(bimbam_ordered[,-c(1:3)])))
+# 
+# unique_hapmap_orig <- setdiff(tolower(unique_columns_hapmap321_genotypes),unique_columns_hapmap321_genotypes_lower)
+# 
+
+
+# hapmap321_genotypes <- read.csv("./test/sv_match_hapmap321_bimbam_w_header_sorted.vcf.gz_genotypes.txt", header = FALSE)
+
+# hapmap321 <- read.csv("~/Downloads/hapmap321_all_chrs_282_genos_max2alleles.vcf.gz.recode.vcf_vcf_to_bimbam_python_script_bimbam_head1000.csv", header=FALSE, col.names = colnames(hapmap321_genotypes))
+
+
+peiffer_blups <- read.csv("./test/282_Peiffer2014Genetics_blupPhenos20150325.csv", sep='\t', header=TRUE)
+#head(peiffer_blups, n=3)
+
+peiffer_blups$Family_Inbred_Name <- gsub('(^[0-9])', 'X\\1', peiffer_blups$Family_Inbred_Name)
+peiffer_blups$Family_Inbred_Name <- gsub('-', '.', peiffer_blups$Family_Inbred_Name)
+peiffer_blups$Family_Inbred_Name <- tolower(peiffer_blups$Family_Inbred_Name)
+
+gc()
+
+
+same_genos <- intersect(tolower(peiffer_blups$Family_Inbred_Name),tolower(hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler))
+
+
+
+peiffer_blups_match_hapmap321_genotypes <- peiffer_blups[tolower(peiffer_blups$Family_Inbred_Name) %in% same_genos,]
+
+hapmap321_genotypes_282set_GoodmanBuckler_dict$no_282set_GoodmanBuckler_lower <- tolower(hapmap321_genotypes_282set_GoodmanBuckler_dict$genotypes_no282set_GoodmanBuckler)
+
+genotypes_to_extract_in_hapmap_to_match_peiffer_order <- merge(peiffer_blups_match_hapmap321_genotypes, hapmap321_genotypes_282set_GoodmanBuckler_dict,
+                                                               by.x = "Family_Inbred_Name", 
+                                                               by.y = "no_282set_GoodmanBuckler_lower") 
+
+# Reorder columns to match original peiffer dataframe columns
+genotypes_to_extract_in_hapmap_to_match_peiffer_order <- genotypes_to_extract_in_hapmap_to_match_peiffer_order[, !(names(genotypes_to_extract_in_hapmap_to_match_peiffer_order) %in% c("genotypes", "genotypes_no282set_GoodmanBuckler"))]
+
+genotypes_to_extract_in_hapmap_to_match_peiffer_order <- genotypes_to_extract_in_hapmap_to_match_peiffer_order[,colnames(peiffer_blups)]
+
+# We know that Peiffer has genotypes that HapMap321 does not have, which include the following(spelling agnostic): B73Htrhm, CML174, F44, il677a, N7A, R109B, and WD.  For the output of the following, only extract the other genotypes, which are the genotypes that are present in HapMap321 but do not have "282set_" as a prefix and/or "Goodman-Buckler" as a suffix.
+genotypes_in_peiffer_not_hapmap321 <- c("B73Htrhm", "CM174", "F44", "il677a", "N7A", "R109B","WD")
+
+extract_these_extra_genotypes_from_hapmap321_no282set_GoodmanBuckler <- c()
+for ( i in setdiff(tolower(peiffer_blups$Family_Inbred_Name),hapmap321_genotypes_282set_GoodmanBuckler_dict$no_282set_GoodmanBuckler_lower) ){
+  if (!(i %in% tolower(genotypes_in_peiffer_not_hapmap321))){
+    extract_these_extra_genotypes_from_hapmap321_no282set_GoodmanBuckler <- c(extract_these_extra_genotypes_from_hapmap321_no282set_GoodmanBuckler, i)
+    
+  }
+}
+
+peiffer_genotypes_wo_282set_GoodmanBuckler_in_hapmap <- peiffer_blups[peiffer_blups$Family_Inbred_Name %in% extract_these_extra_genotypes_from_hapmap321_no282set_GoodmanBuckler, ]
+
+peiffer_hapmap321_phenotype_file <- rbind(genotypes_to_extract_in_hapmap_to_match_peiffer_order,peiffer_genotypes_wo_282set_GoodmanBuckler_in_hapmap)
+peiffer_hapmap321_phenotype_file <- peiffer_hapmap321_phenotype_file[order(peiffer_hapmap321_phenotype_file$Family_Inbred_Name),]
+
+same_genos <- as.data.frame(same_genos)
+extract_these_extra_genotypes_from_hapmap321_no282set_GoodmanBuckler <- as.data.frame(extract_these_extra_genotypes_from_hapmap321_no282set_GoodmanBuckler)
+colnames(same_genos) <- "cnames"
+colnames(extract_these_extra_genotypes_from_hapmap321_no282set_GoodmanBuckler) <- "cnames"
+
+hapmap321_extract_these_genotypes <- rbind(same_genos, extract_these_extra_genotypes_from_hapmap321_no282set_GoodmanBuckler) %>% 
+  arrange(cnames)
+
+
+
+check <- hapmap321_genotypes_dict %>%
+  filter(no_282set_GoodmanBuckler_lower %in% tolower(peiffer_hapmap321_phenotype_file$Family_Inbred_Name)) %>% 
+  select(genotypes,no_282set_GoodmanBuckler_lower)
+
+# Genos are going to be duplcated if they have 282set and/or Goodman Buckler prefix and suffixes, respectively... we need to remove the ones without those prefixes and suffixes
+
+duplicated_genos <- check$no_282set_GoodmanBuckler_lower[duplicated(check$no_282set_GoodmanBuckler_lower)]
+
+
+
+test <- hapmap321_genotypes_dict[hapmap321_genotypes_dict$no_282set_GoodmanBuckler_lower %in% hapmap321_extract_these_genotypes$cnames,]
+
+
+peiffer_blups$Family_Inbred_Name <- gsub('(^[0-9])', 'X\\1', peiffer_blups$Family_Inbred_Name)
+peiffer_blups$Family_Inbred_Name <- gsub('-', '.', peiffer_blups$Family_Inbred_Name)
+
+
+
+
+
+
+
+length(unique(test$genotypes_no282set_GoodmanBuckler))
+
+
+
+
+
+
+
+# Sorting the phenotype file
+peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide_ordered <- peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide[match(colnames(matching_bimbam_to_peiffer_phenotype_ordered[-1:-3]),peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide$Family_Inbred_Name),]
+
+
+
+# Create phenotype file to match hapmap genotypes order
+row_indices <- match(hapmap321_genotypes$genotypes,peiffer_blups$Family_Inbred_Name)
+row_indices_same_genos <- match(same_genos,peiffer_blups$Family_Inbred_Name)
+
+
+peiffer_blups_match_hapmap321 <- peiffer_blups[row_indices_same_genos,] %>% 
+  filter(rowSums(is.na(.)) !=ncol(.))
+```
+
+```{r}
+# Writing phenotype file (with genotypes and header)
+write.table(peiffer_blups_match_hapmap321, "./test/Peiffer2014Genetics_phenotype_hapmap312_w_extra_fields_w_header.tsv", sep = '\t', row.names=FALSE, col.names=TRUE, quote=FALSE)
+
+# Phenotype file for hapmap gwas (w/o extra fields)
+write.table(peiffer_blups_match_hapmap321[-1:-5], "./test/Peiffer2014Genetics_phenotype_hapmap312_wo_extra_fields_wo_header.tsv", sep = '\t', row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+gc()
+```
+<!-- #  -->
+<!-- # # Match order from peiffer bimbam with 282 SV PAVs -->
+<!-- # # Here is the final phenotype file: peiffer_blups_match_all_282_SV_types_only_ID_qg_type_wide_ordered -->
+<!-- # # The order should  match variable (or character?) 'matching_bimbam_to_peiffer_phenotype' -->
+<!-- #  -->
+<!-- # peiffer_blups_match_sv_wide <- peiffer_blups[peiffer_blups$Family_Inbred_Name %in% same_genos,] -->
+<!-- #  -->
+<!-- # sv_bimbam_to_peiffer_phenotype <- cbind(bimbam_ordered[1:3], bimbam_ordered[-1:-3][,colnames(bimbam_ordered[-1:-3]) %in% same_genos]) -->
+<!-- #  -->
+<!-- #  -->
+<!-- # sv_bimbam_to_peiffer_phenotype_ordered <- cbind(bimbam_ordered[1:3], sv_bimbam_to_peiffer_phenotype[-1:-3][,sort(colnames(sv_bimbam_to_peiffer_phenotype[-1:-3]))]) -->
+<!-- #  -->
+<!-- #  -->
+<!-- #  -->
+<!-- # hapmap321_bimbam_to_peiffer_phenotype <- cbind(hapmap321[1:3], hapmap321[-1:-3][,colnames(hapmap321[-1:-3]) %in% same_genos]) -->
+<!-- #  -->
+<!-- #  -->
+<!-- # hapmap321_bimbam_to_peiffer_phenotype_ordered <- cbind(hapmap321[1:3], hapmap321_bimbam_to_peiffer_phenotype[-1:-3][,sort(colnames(hapmap321_bimbam_to_peiffer_phenotype[-1:-3]))]) -->
+<!-- #  -->
+<!-- #  -->
+<!-- #  -->
+<!-- #  -->
+<!-- # If you want to compare kinship matrices between SVs and SNPs, make sure that they have the same genotypes and are in the same order -->
+
+<!-- # for (f in colnames(matching_hapmap321_bimbam_to_peiffer_phenotype_ordered[-1:-3])){ -->
+<!-- #   print(paste(f, grep(paste("^",f,"$", sep=''), colnames(hapmap321)), sep = ':')) -->
+<!-- # } -->
+<!-- #  -->
+<!-- #  -->
+<!-- # # Make SV bimbam that will match the Hapmap321 bimbam genotypes -->
+<!-- #  -->
+<!-- #  -->
+<!-- # matching_bimbam_to_peiffer_phenotype_ordered <- cbind(bimbam_ordered[1:3], matching_bimbam_to_peiffer_phenotype[,sort(colnames(matching_bimbam_to_peiffer_phenotype[-1:-3]))]) -->
+<!-- #  -->
+<!-- #  -->
+
+
+
+```{r}
+for (x in unique(peiffer_blups$Family_Inbred_Name)){
+  if (!any(grepl(x, colnames(hapmap321)))){
+  print(x)
+  }
+}
+```
+
+
+Write the bimbams that match between the SVs and the HAPMAP321 data as well as the corresponding phenotype file
+```{r}
+# Can't write out bimbam because the actual file is far too large
+# Go through awk way
+# HAPMAP bimbam 
+# write.table(hapmap321_bimbam_to_peiffer_phenotype_ordered, "~/Desktop/github/282/gemma/hapmap321_match_sv_bimbam.csv", sep = ',', row.names=FALSE, col.names=FALSE, quote=FALSE)
+for (f in colnames(hapmap321_bimbam_to_peiffer_phenotype_ordered[-1:-3])){
+  print(paste(f, grep(paste("^",f,"$", sep=''), colnames(hapmap321)), sep = ':'))
+}
+```
+
+What genotypes intersect the sv dataset and hapmap321
+```{r}
+bimbam_ordered <- read.csv("./test/bimbam_282_w_header_oldIDs.csv", header=TRUE)
+bimbam_ordered$minor_allele <- 'T' # reading in the csv causes the T to turn into "TRUE" and I don't want to go through the trouble of explicitly stating classes for each column
+# Need to be careful because some genotypes start with numbers, which R does not like
+# In order to accommodate this, go into your phenotype table and edit the genotypes starting with numbers to append an 'X' on the front
+# Also need to convert dashes (-) with periods (.) since R does not like periods in colnames, which we use later on in ordering genotypes and phenotypes
+
+bimbam_ordered_hapmap_peiffer_intersection <- cbind(bimbam_ordered[,1:3],subset(bimbam_ordered[,-1:-3], select = tolower(names(bimbam_ordered[,-1:-3])) %in% tolower(common_columns)))
+names(bimbam_ordered_hapmap_peiffer_intersection) <- tolower(names(bimbam_ordered_hapmap_peiffer_intersection))
+
+# w/ header
+write.table(bimbam_ordered_hapmap_peiffer_intersection, "./test/sv_match_hapmap321_bimbam_w_header.csv", sep = ',', row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+
+# w/o header
+write.table(bimbam_ordered_hapmap_peiffer_intersection, "./test/sv_match_hapmap321_bimbam.csv", sep = ',', row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+```
+
+```{r}
+
+# Phenotype file
+write.table(sv_bimbam_to_peiffer_phenotype[-1:-5], "~/Desktop/github/282/phenotypes/Peiffer2014Genetics_phenotype_hapmap312_sv.tsv", sep = '\t', row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+# SV bimbam
+write.table(sv_bimbam_to_peiffer_phenotype_ordered, "~/Desktop/github/282/gemma/sv_match_hapmap321_bimbam.csv", sep = ',', row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+
+```
+
+Write out phenotype file that matches the genotypes with the hapmap321 bimbam file
+```{r}
+write.table(peiffer_blups_match_hapmap321_wide_ordered[-1:-5], "~/Desktop/github/282/phenotypes/282_Peiffer2014Genetics_phenotype_hapmap312_noIDline.tsv", sep = '\t', row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
+
+Since the hapmap file is so large, I would like to find the original indices of the now ordered genotypes and rearrange them using these indices using awk on command line
+```{r}
+for (f in colnames(matching_hapmap321_bimbam_to_peiffer_phenotype_ordered[-1:-3])){
+  print(paste(f, grep(paste("^",f,"$", sep=''), colnames(hapmap321)), sep = ':'))
+}
+# Then with the outputted indices, use regular expressions and create an awk line to rearrage the csv that was imported as 'hapmap321
+# Ended up running the following awk line to rearrange the csv file to the new ordered bimbam
+# awk -F, '{ print $1,$2,$3,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41,$42,$43,$44,$45,$46,$47,$48,$49,$50,$51,$52,$53,$4,$54,$55,$56,$57,$58,$59,$60,$61,$62,$63,$64,$65,$66,$67,$68,$5,$69,$70,$71,$72,$73,$74,$75,$76,$77,$78,$79,$80,$81,$82,$83,$84,$85,$86,$87,$88,$89,$90,$91,$92,$93,$94,$95,$96,$97,$98,$99,$100,$101,$102,$103,$104,$105,$106,$107,$108,$109,$110,$111,$112,$113,$114,$115,$116,$117,$118,$119,$120,$121,$122,$123,$124,$125,$126,$127,$128,$129,$130,$131,$132,$133,$134,$135,$136,$137,$138,$139,$140,$141,$142,$143,$144,$145,$146,$147,$148,$149,$150,$151,$152,$153,$154,$155,$156,$157,$158,$159,$160,$161,$162,$163,$164,$165,$166,$167,$168,$6,$169,$170,$171,$7,$172,$173,$174,$175,$176,$177,$178,$179,$180,$181,$182,$183,$184,$185,$186,$187,$188,$189,$190,$191,$192,$193,$194,$195,$196,$197,$198,$199,$200,$201,$202,$203,$204,$205,$206,$207,$208,$209,$210,$211,$212,$213,$214,$215,$216,$217,$8,$218,$219,$9,$220,$10,$221,$222,$223,$224,$225,$226,$227,$228,$229,$230,$231,$232,$233,$234,$235,$236,$237,$238,$239,$240,$241,$242,$243,$244,$245,$246,$247,$248,$249,$250,$251,$252,$253,$254,$255,$256,$257,$258,$259,$260,$261,$262,$11,$12,$263,$13,$14,$15,$264 }' OFS=, hapmap321_all_chrs_282_genos_max2alleles.vcf.gz.recode.vcf_no_DEL_INS_NA_w_header.bimbam > hapmap321_all_chrs_282_genos_max2alleles.vcf.gz.recode.vcf_no_DEL_INS_NA_w_header_peiffer_order_20230829_v2.bimbam
+```
+
+# Phenotypes - traitMatrix
+### Note: traitMatrix DOES NOT contain the IllHy genotype so 
+```{r}
+
+# colnames(all_282_SV_types_only_ID_qg_type_wide_ordered[-1:-3])
+traitmatrix <- read.csv("./phenotypes/traitMatrix_maize282NAM_v15-130212.txt", sep='\t', header=TRUE)
+# head(traitmatrix, n=3)
+
+
+traitmatrix$X.Trait. <- gsub('(^[0-9])', 'X\\1', traitmatrix$X.Trait.)
+traitmatrix$X.Trait.<- gsub('-', '.', traitmatrix$X.Trait.)
+
+gc()
+
+
+traitmatrix_match_all_282_SV_types_only_ID_qg_type_wide <- traitmatrix[traitmatrix$X.Trait. %in% (intersect(colnames(bimbam_ordered[-1:-3]), traitmatrix$X.Trait.)),]
+
+# Now, need to make sure the phenotypes in the peiffer dataset are also in the bimbam
+
+matching_bimbam_to_traitmatrix_phenotype <- cbind(bimbam_ordered[1:3], bimbam_ordered[,colnames(bimbam_ordered[-1:-3]) %in% traitmatrix_match_all_282_SV_types_only_ID_qg_type_wide$X.Trait.][-1:-3])
+
+# Sorting bimbam file
+matching_bimbam_to_traitmatrix_phenotype_ordered <- cbind(bimbam_ordered[1:3], matching_bimbam_to_traitmatrix_phenotype[,sort(colnames(matching_bimbam_to_traitmatrix_phenotype[-1:-3]))])
+
+
+# Sorting the phenotype file
+traitmatrix_match_all_282_SV_types_only_ID_qg_type_wide_ordered <- traitmatrix_match_all_282_SV_types_only_ID_qg_type_wide[match(colnames(matching_bimbam_to_traitmatrix_phenotype_ordered[-1:-3]),traitmatrix_match_all_282_SV_types_only_ID_qg_type_wide$X.Trait.),]
+                                   
+```
+
+Find the column that contains the genotype that does not exist in the phenotype file 
+```{r}
+names_lower <- tolower(names(matching_bimbam_to_traitmatrix_phenotype_ordered))
+heading_lower <- tolower("ILLHy")  # traitmatrix doesn't contain ILLHy
+
+remove_genotype_index <- which(names_lower == heading_lower) # find the column index where genotype exists
+
+# Print the column index
+print(remove_genotype_index)
+```
+
+or find the column index this way
+```{r}
+grep("ILLHy", colnames(matching_bimbam_to_traitmatrix_phenotype_ordered))
+```
+
+
+Write the new ordered phenotype file and bimbam file --> input for GEMMA
+```{r}
+# Writing phenotype file (with genotypes and header)
+                                                                                                                                              write.table(traitmatrix_match_all_282_SV_types_only_ID_qg_type_wide_ordered, "./test/gemma/traitmatrix/282_traitmatrix_phenotype_w_genotypes_header.tsv", sep = '\t', row.names=FALSE, col.names=TRUE, quote=FALSE)
+
+# Writing phenotype file --> for GEMMA
+write.table(traitmatrix_match_all_282_SV_types_only_ID_qg_type_wide_ordered[-1], "./test/gemma/traitmatrix/282_traitmatrix_phenotype_wo_extra_fields.tsv", sep = '\t', row.names=FALSE, col.names=FALSE, quote=FALSE)
+
+
+# Writing bimbam file (with genotype header)
+write.table(matching_bimbam_to_traitmatrix_phenotype_ordered[-remove_genotype_index], "./test/gemma/traitmatrix/282_traitmatrix_bimbam_w_header.csv", sep = ',', row.names=FALSE, col.names=TRUE, quote=FALSE)
+
+# Writing bimbam file
+write.table(matching_bimbam_to_traitmatrix_phenotype_ordered[-remove_genotype_index], "./test/gemma/traitmatrix/282_traitmatrix_bimbam.csv", sep = ',', row.names=FALSE, col.names=FALSE, quote=FALSE)
+```
+
+
+```{r}
+
+genos_in_pheno <- peiffer_blups$Family_Inbred_Name
+genos_in_pheno
+```
+
+
+
+Checking to see which genotypes are in both the original df and the output bimbam 
+```{r}
+#missing_genotypes_in_all_282_SV_types_only_ID_qg_type_wide 
+for (x in unique(all_282_query_genotype)){
+  if (!any(grepl(x, colnames(new_data_order)))){
+  print(x)
+  }
+}
+```
+
+
+Freq. of missing data per SV-present allele
+```{r}
+
+# bimbam_ordered <- read.csv("./test/bimbam_282_w_header_oldIDs.csv", header=TRUE)
+# bimbam_ordered$minor_allele <- 'T' # reading in the csv causes the T to turn into "TRUE" and I don't want to go through the trouble of explicitly stating classes for each column
+
+# missing_counts <- apply(bimbam_ordered[,c(-1:-3)], MARGIN = 1, function(x) (length(which(x=='NA')))/length(colnames(bimbam_ordered[,c(-1:-3)])))
+# hist(missing_counts)
+
+bimbam_ordered_peiffer_intersection <- read.table("./test/282_Peiffer2014Genetics_bimbam_w_header_20240609.csv", sep = ',',header = TRUE)
+
+na_percentage <- rowSums(is.na(bimbam_ordered_peiffer_intersection[,c(-1:-3)])) / ncol(bimbam_ordered_peiffer_intersection[,c(-1:-3)]) * 100
+
+# Step 2: Create a dataframe for plotting
+na_df <- data.frame(na_percentage)
+
+
+
+
+
+
+non_na_percentage <- rowSums(!is.na(bimbam_ordered_peiffer_intersection[,c(-1:-3)])) / ncol(bimbam_ordered_peiffer_intersection[,c(-1:-3)]) * 100
+
+# Step 2: Create a dataframe for plotting
+non_na_df <- data.frame(non_na_percentage)
+
+png("./test/perc_genotype_called_per_sv.png", width = 10, height = 8 , res = 400, units = "in")
+ggplot(non_na_df, aes(x = non_na_percentage)) +
+  geom_histogram(binwidth = 2,aes(fill = non_na_df > 90), boundary = 0,col=I("black"), linewidth = 0.4,show.legend = FALSE) +
+  scale_x_continuous(breaks = seq(0, 100, by = 10), limits = c(0, 100),expand = c(0,0))+
+  scale_y_continuous(expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+  # scale_y_discrete(expand = c(0, 0)) +
+  scale_fill_manual(values = c("FALSE" = "grey", "TRUE" = "green")) +
+  labs(x = "Percentage of Genotypes Called",
+       y = "Frequency") +
+      theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.background = element_rect(fill = "white"),  # Set plot background color to white
+          panel.background = element_rect(fill = "white"),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black"),
+          axis.ticks = element_line(size = 0.8),  # Customize tick marks
+          axis.ticks.length = unit(0.2, "cm"),
+          axis.text.x = element_text(color="black"),
+          axis.text.y = element_text(color="black"),
+          axis.text = element_text(size=15), 
+          axis.title = element_text(size =17),
+          legend.title = element_text(size = 17),
+          legend.text = element_text(size = 15),
+          plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+dev.off()
+
+
+
+# ggplot(non_na_df, aes(x = non_na_percentage)) +
+#   geom_histogram(binwidth = 1, aes(fill = non_na_percentage > 90), color = "black", boundary = 0) +
+#   scale_x_continuous(breaks = seq(0, 100, by = 10), limits = c(0, 100)) +
+#   scale_fill_manual(values = c("FALSE" = "blue", "TRUE" = "red")) +
+#   labs(title = "Histogram of Percentage of Non-NA Values per Row",
+#        x = "Percentage of Non-NA Values",
+#        y = "Frequency") +
+#   theme_minimal() +
+#   theme(legend.position = "none")
+
+
+
+length(missing_counts[missing_counts <=0.1])
+length(missing_counts[missing_counts <=0.2])
+length(missing_counts[missing_counts <=0.3])
+length(missing_counts[missing_counts <=0.4])
+
+```
+
+
+
+
+# Make sfs (courtesy of Miles Roberts)
+```{r}
+library(MetBrewer)
+# Input: vector of genotype calls for a given snp (0,1,2,...,ploidy), NAs are encoded as NA
+# Output: total number of genotype calls made (number of individual genotypes*ploidy), correcting for missing data
+num_geno_calls = function(x, ploidy){
+  length(x[!is.na(x)])*ploidy
+}
+
+# Input: genotype table with genotype calls varying from 0,1,2,...,ploidy
+# Output: vector of allele frequencies for alternate alleles
+sfs = function(someTable, ploidy){
+  # calculate alternate allele frequency
+  alt_counts = rowSums(someTable[,c(-1:-3)], na.rm = T)
+  
+  # calculate number of genotype calls for each variant
+  num_geno_calls = apply(someTable[,c(-1:-3)], MARGIN = 1, FUN = num_geno_calls, ploidy = ploidy)
+  
+  # calculate alternate allele frequency
+  print("Calculating frequency of alternate alleles...")
+  alt_freq = alt_counts/num_geno_calls
+  result_df = data.frame(key = someTable[, 1], alt_freq = alt_freq)
+  
+  # Return the resulting dataframe
+  return(result_df)
+}
+
+
+# For whatever reason, my Rstudio is giving errors when I don't include the entire path... 
+df_w_header <- read.csv("/home/nathan/Desktop/github/282/test/bimbam_282_w_header_oldIDs_20240609.csv", header = TRUE)
+# df_w_header <- read.csv("./test/bimbam_282_w_header_oldIDs.csv", header = TRUE)
+
+df_header_sfs <- sfs(df_w_header, 2)
+
+# Let's look at the SFS for the SVs that are analyzed in GEMMA gwas
+svs_in_peiffer_gwas <- read.table("/home/nathan/Desktop/github/282/test/svs_in_peiffer_test_20240606_gwas_unimputed.txt", header = FALSE )
+# svs_in_peiffer_gwas <- read.table("./test/svs_in_peiffer_gwas_unimputed.txt", header = FALSE )
+
+df_bimbam_svs_in_peiffer_gwas <- df_w_header[df_w_header$ID %in% svs_in_peiffer_gwas$V1, ]
+
+df_bimbam_svs_in_peiffer_gwas_sfs <- sfs(df_bimbam_svs_in_peiffer_gwas, 2)
+
+png("./test/sfs_gwas_svs_ggplot2.png", width = 8, height = 6 , res = 400, units = "in")
+ggplot(df_bimbam_svs_in_peiffer_gwas_sfs, aes(x=alt_freq))+
+  geom_histogram(col=I("black"), fill = "grey", linewidth = 0.4)+
+  ylim(c(0,3000))+
+  scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0,0))+
+  scale_y_continuous(breaks = seq(0, 3000, by = 500), expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+  xlab("Allele Frequency")+
+  ylab("Number of SVs ")+
+  # ggtitle("Site-frequency Spectrum of SV-present alleles")+
+  # scale_fill_discrete(name = "Reference Genotype")+
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.background = element_rect(fill = "white"),  # Set plot background color to white
+          panel.background = element_rect(fill = "white"),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black"),
+          axis.ticks = element_line(size = 0.5),  # Customize tick marks
+          axis.ticks.length = unit(0.2, "cm"),
+          axis.text.x = element_text(color="black"),
+          axis.text.y = element_text(color="black"),
+          axis.text = element_text(size=12), 
+          axis.title = element_text(size =14),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12),
+          plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+dev.off()
+# Now let's look at proportions of SV type in SFS
+
+
+
+
+
+sv_categories <- read.csv("/home/nathan/Desktop/github/282/test/sv_categories.csv", header = TRUE)
+# sv_categories <- read.csv("./scripts/sv_categories.csv", header = TRUE)
+df_bimbam_svs_in_peiffer_gwas_sfs_cats <- merge(df_bimbam_svs_in_peiffer_gwas_sfs, sv_categories, by.x = "key", by.y = "sv_id", all.x = TRUE)
+
+df_bimbam_svs_in_peiffer_gwas_sfs_cats <- df_bimbam_svs_in_peiffer_gwas_sfs_cats %>% 
+    mutate(category = case_when(
+      category == "Category_1"~ "No TE SV",
+      category == "Category_2"~ "Incomplete TE SV",
+      category == "Category_3"~ "TE = SV",
+      category == "Category_4"~ "Multi TE SV",
+      category == "Category_5"~ "TE Within SV",
+      TRUE~category
+    ))
+
+df_bimbam_svs_in_peiffer_gwas_sfs_cats <- df_bimbam_svs_in_peiffer_gwas_sfs_cats %>% 
+  mutate(bin = cut(alt_freq, breaks = c(seq(0.1, 0.9, by = 0.1),0.91), labels = FALSE))
+
+for (i in unique(df_bimbam_svs_in_peiffer_gwas_sfs_cats$bin)){
+  print(i)
+  print(min(df_bimbam_svs_in_peiffer_gwas_sfs_cats$alt_freq[df_bimbam_svs_in_peiffer_gwas_sfs_cats$bin == i]))
+  print(max(df_bimbam_svs_in_peiffer_gwas_sfs_cats$alt_freq[df_bimbam_svs_in_peiffer_gwas_sfs_cats$bin == i]))
+}
+
+
+
+df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary <- df_bimbam_svs_in_peiffer_gwas_sfs_cats %>%
+  group_by(bin, category) %>%
+  summarise(total_value = sum(alt_freq)) %>%
+  ungroup()
+
+df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary <- df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary %>%
+  mutate(category = factor(category)) %>%
+  bind_rows(df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary %>% 
+              group_by(bin) %>% 
+              summarise(category = "All SVs Combined", 
+                        total_value = sum(total_value)))
+
+
+
+df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary_combined <- df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary %>%
+  group_by(category) %>%
+  mutate(sum_total_value = sum(total_value)) %>%  # Calculate sum of total_value within each category
+  ungroup()
+
+df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary_combined <- df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary_combined %>%
+  mutate(proportion = total_value / sum_total_value)
+
+
+df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary_combined_ggplot2 <- drop_na(df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary_combined) %>% 
+  ggplot(aes(x = as.factor(bin), y = proportion, fill = category)) +
+  geom_bar(stat = "identity", position = "dodge",col=I("black"), linewidth = 0.4) +
+  scale_x_discrete(expand = c(0,0), 
+                   labels=c("0.1-1.9","0.2-2.9","0.3-3.9","0.4-4.9",
+                            "0.5-5.9","0.6-6.9","0.7-7.9","0.8-0.9"))+
+  scale_y_continuous(expand = c(0,0))+
+  expand_limits(x = 0, y = 0)+
+  scale_fill_manual(name = "SV Category", values = as.vector(met.brewer("Java", n=length(unique(df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary_combined$category)))))+
+  labs(x ="Allele Frequency", y = "Proportion of SVs ")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+      plot.background = element_rect(fill = "white"),  # Set plot background color to white
+      panel.background = element_rect(fill = "white"),
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks = element_line(size = 0.8),  # Customize tick marks
+      axis.ticks.length = unit(0.2, "cm"),
+      axis.text.x = element_text(color="black", angle=45, vjust = 0.6),
+      axis.text.y = element_text(color="black"),
+      axis.text = element_text(size=15), 
+      axis.title = element_text(size =17),
+      legend.title = element_text(size = 17),
+      legend.text = element_text(size = 15),
+      plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+png("~/Desktop/github/282/test/sfs_gwas_svs_proportions_ggplot2_unimputed.png", width = 8, height = 6 , res = 400, units = "in")
+df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary_combined_ggplot2
+dev.off()
+
+
+
+
+# SFS histogram
+######################
+## Figure for paper ##
+######################
+png("./test/sfs_ggplot2.png", width = 8, height = 6 , res = 400, units = "in")
+ggplot(df_header_sfs, aes(x=alt_freq))+
+  geom_histogram(col=I("black"), fill = "grey", linewidth = 0.4)+
+  ylim(c(0,3000))+
+  scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0,0))+
+  scale_y_continuous(breaks = seq(0, 3000, by = 500), expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+  xlab("Allele Frequency")+
+  ylab("Number of SVs ")+
+  # ggtitle("Site-frequency Spectrum of SV-present alleles")+
+  # scale_fill_discrete(name = "Reference Genotype")+
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.background = element_rect(fill = "white"),  # Set plot background color to white
+          panel.background = element_rect(fill = "white"),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black"),
+          axis.ticks = element_line(size = 0.5),  # Customize tick marks
+          axis.ticks.length = unit(0.2, "cm"),
+          axis.text.x = element_text(color="black"),
+          axis.text.y = element_text(color="black"),
+          axis.text = element_text(size=12), 
+          axis.title = element_text(size =14),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12),
+          plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+dev.off()
+
+#################################################
+# Plotting all SVs next to Category 3 (TE = SV) #
+#################################################
+df_w_header <- read.csv("/home/nathan/Desktop/github/282/test/bimbam_282_w_header_oldIDs_20240609.csv", header = TRUE)
+sv_categories <- read.csv("~/Desktop/github/282/scripts/sv_categories.csv", header = TRUE)
+df_sfs_sv_cats <- merge(df_header_sfs, sv_categories, by.x = "key", by.y = "sv_id", all.x = TRUE)
+
+df_sfs_sv_cats <- df_sfs_sv_cats %>% 
+  mutate(bin = cut(alt_freq, breaks = seq(0, 1.1, by = 0.1), labels = FALSE))
+
+
+df_sfs_sv_cats_summary <- df_sfs_sv_cats %>%
+  group_by(bin, category) %>%
+  summarise(total_value = sum(alt_freq)) %>%
+  ungroup()
+
+df_sfs_sv_cats_summary <- df_sfs_sv_cats_summary %>%
+  mutate(category = factor(category)) %>%
+  bind_rows(df_sfs_sv_cats_summary %>% 
+              group_by(bin) %>% 
+              summarise(category = "combined", 
+                        total_value = sum(total_value)))
+
+df_sfs_sv_cats_summary_cat3_combined <- df_sfs_sv_cats_summary %>% 
+  filter(category == "Category_3" | category == "combined") %>% 
+  mutate(category = case_when(
+    category == "Category_3" ~ "TE = SV",
+    category == "combined" ~ "All SVs",
+    TRUE ~ category  # Keep original value if no replacement condition is met
+  ))
+df_sfs_sv_cats_summary_cat3_combined <- df_sfs_sv_cats_summary_cat3_combined %>%
+  group_by(category) %>%
+  mutate(sum_total_value = sum(total_value)) %>%  # Calculate sum of total_value within each category
+  ungroup()
+
+df_sfs_sv_cats_summary_cat3_combined <- df_sfs_sv_cats_summary_cat3_combined %>%
+  mutate(proportion = total_value / sum_total_value)
+
+
+ggplot(df_sfs_sv_cats_summary_cat3_combined, aes(x = as.factor(bin), y = proportion, fill = category)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  scale_x_discrete(labels = seq(0, 1, by = 0.1)) +
+  labs(x = "Value Bins", y = "Total Value", fill = "Category") +
+  theme_minimal()
+
+# ggplot(df_sfs_sv_cats_summary_cat3_combined, aes(x = as.factor(bin), y = total_value, fill = category)) +
+#   geom_bar(stat = "identity", position = "dodge") +
+#   scale_x_discrete(labels = seq(0, 1, by = 0.1)) +
+#   labs(x = "Value Bins", y = "Total Value", fill = "Category") +
+#   theme_minimal()
+
+# SFS of all SVs and TE=SV next to each bar for each bin
+######################
+## Figure for paper ##
+######################
+png("./test/sfs_proportion_all_svs_and_te_equal_svs.png", width = 8, height = 5 , res = 400, units = "in")
+df_sfs_sv_cats_summary_cat3_combined_ggplot2 <- ggplot(df_sfs_sv_cats_summary_cat3_combined, aes(x = as.factor(bin), y = proportion, fill = category)) +
+  geom_bar(stat = "identity", position = "dodge",col=I("black"), linewidth = 0.4) +
+  scale_x_discrete(labels = seq(0, 1, by = 0.1), expand = c(0,0)) +
+  labs(x = "Allele Frequency", y = "Proportion of SVs", fill = "Category") +
+  # scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0,0))+
+  scale_y_continuous(breaks = seq(0, 1, by = 0.05), expand = c(0,0))+
+  scale_fill_manual("", values=c("#6A6968", "lightgrey"))+
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.background = element_rect(fill = "white"),  # Set plot background color to white
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        axis.ticks = element_line(size = 0.5),  # Customize tick marks
+        axis.ticks.length = unit(0.2, "cm"),
+        axis.text.x = element_text(color="black"),
+        axis.text.y = element_text(color="black"),
+        axis.text = element_text(size=12), 
+        axis.title = element_text(size =14),
+        legend.text = element_text(size = 12),
+        plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+df_sfs_sv_cats_summary_cat3_combined_ggplot2
+dev.off()
+
+
+
+
+
+```
+# Imputed bimbam
+```{r}
+svs_imputed <- read.table("/home/nathan/Desktop/github/282/data/282_sv_only_imputedWithFounders_bimbam_nate_ids_w_header.txt", header = TRUE)
+# svs_imputed <- read.table("./test/282_sv_only_imputedWithFounders_bimbam_nate_ids_w_header.txt", header = TRUE)
+svs_imputed_sfs <- sfs(svs_imputed, 2)
+
+svs_in_peiffer_gwas_imputed <- read.table("/home/nathan/Desktop/github/282/data/svs_in_peiffer_gwas_imputed.txt", header = FALSE )
+# svs_in_peiffer_gwas_imputed <- read.table("./test/svs_in_peiffer_gwas_imputed.txt", header = FALSE )
+
+df_bimbam_svs_in_peiffer_gwas_imputed <- svs_imputed[svs_imputed$ID %in% svs_in_peiffer_gwas_imputed$V1, ]
+
+df_bimbam_svs_in_peiffer_gwas_sfs_imputed <- sfs(df_bimbam_svs_in_peiffer_gwas_imputed, 2)
+
+sv_categories <- read.csv("~/Desktop/github/282/scripts/sv_categories.csv", header = TRUE)
+svs_imputed_sfs_cats <- merge(df_bimbam_svs_in_peiffer_gwas_sfs_imputed, sv_categories, by.x = "key", by.y = "sv_id", all.x = TRUE)
+
+svs_imputed_sfs_cats <- svs_imputed_sfs_cats %>% 
+    mutate(category = case_when(
+      category == "Category_1"~ "No TE SV",
+      category == "Category_2"~ "Incomplete TE SV",
+      category == "Category_3"~ "TE = SV",
+      category == "Category_4"~ "Multi TE SV",
+      category == "Category_5"~ "TE Within SV",
+      TRUE~category
+    ))
+
+svs_imputed_sfs_cats <- svs_imputed_sfs_cats %>% 
+  mutate(bin = cut(alt_freq, breaks = c(seq(0.1, 0.9, by = 0.1),0.91), labels = FALSE))
+
+
+svs_imputed_sfs_cats_summary <- svs_imputed_sfs_cats %>%
+  group_by(bin, category) %>%
+  summarise(total_value = sum(alt_freq)) %>%
+  ungroup()
+
+svs_imputed_sfs_cats_summary <- svs_imputed_sfs_cats_summary %>%
+  mutate(category = factor(category)) %>%
+  bind_rows(svs_imputed_sfs_cats_summary %>% 
+              group_by(bin) %>% 
+              summarise(category = "All SVs Combined", 
+                        total_value = sum(total_value)))
+
+
+
+svs_imputed_sfs_cats_summary_combined <- svs_imputed_sfs_cats_summary %>%
+  group_by(category) %>%
+  mutate(sum_total_value = sum(total_value)) %>%  # Calculate sum of total_value within each category
+  ungroup()
+
+svs_imputed_sfs_cats_summary_combined <- svs_imputed_sfs_cats_summary_combined %>%
+  mutate(proportion = total_value / sum_total_value)
+
+
+svs_imputed_sfs_cats_summary_combined_ggplot2 <- drop_na(svs_imputed_sfs_cats_summary_combined) %>% 
+  ggplot(aes(x = as.factor(bin), y = proportion, fill = category)) +
+  geom_bar(stat = "identity", position = "dodge",col=I("black"), linewidth = 0.4) +
+  scale_x_discrete(expand = c(0,0), 
+                   labels=c("0.1-1.9","0.2-2.9","0.3-3.9","0.4-4.9",
+                            "0.5-5.9","0.6-6.9","0.7-7.9","0.8-0.9"))+
+  scale_y_continuous(expand = c(0,0))+
+  expand_limits(x = 0, y = 0)+
+  scale_fill_manual(name = "SV Category", values = as.vector(met.brewer("Java", n=length(unique(svs_imputed_sfs_cats_summary_combined$category)))))+
+  labs(x ="Allele Frequency", y = "Proportion of SVs ")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+      plot.background = element_rect(fill = "white"),  # Set plot background color to white
+      panel.background = element_rect(fill = "white"),
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks = element_line(size = 0.8),  # Customize tick marks
+      axis.ticks.length = unit(0.2, "cm"),
+      axis.text.x = element_text(color="black", angle=45, vjust = 0.6),
+      axis.text.y = element_text(color="black"),
+      axis.text = element_text(size=15), 
+      axis.title = element_text(size =17),
+      legend.title = element_text(size = 17),
+      legend.text = element_text(size = 15),
+      plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+
+png("~/Desktop/github/282/paper/figures/sfs_gwas_svs_proportions_imputed_ggplot2.png", width = 8, height = 6 , res = 400, units = "in")
+svs_imputed_sfs_cats_summary_combined_ggplot2
+dev.off()
+```
+
+# Showing both SFSs for both unimputed and imputed SVs used in GWAS
+```{r}
+png("~/Desktop/github/282/paper/figures/sfs_gwas_svs_proportions_unimputed_and_imputed_ggarrange.png", width = 16, height = 8 , res = 400, units = "in")
+ggarrange(df_bimbam_svs_in_peiffer_gwas_sfs_cats_summary_combined_ggplot2+labs(tag = 'A.')+theme(plot.margin = margin(t = 0.6,r = 0.6, b = 0.6, l = 0.6, "cm")),svs_imputed_sfs_cats_summary_combined_ggplot2+labs(tag = 'B.')+theme(plot.margin = margin(t = 0.6,r = 0.6, b = 0.6, l = 0.6, "cm")), common.legend = TRUE, legend = "right")
+dev.off()
+
+```
+
+
+Other plots that might be interesting
+```{r}
+# All SVs SFS
+ggplot(svs_imputed_sfs, aes(x=alt_freq))+
+  geom_histogram(col=I("black"), fill = "grey", linewidth = 0.4)+
+  ylim(c(0,3000))+
+  scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0,0))+
+  scale_y_continuous(breaks = seq(0, 3000, by = 500), expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+  xlab("Allele Frequency")+
+  ylab("Number of SVs ")+
+  # ggtitle("Site-frequency Spectrum of SV-present alleles")+
+  # scale_fill_discrete(name = "Reference Genotype")+
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.background = element_rect(fill = "white"),  # Set plot background color to white
+          panel.background = element_rect(fill = "white"),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black"),
+          axis.ticks = element_line(size = 0.5),  # Customize tick marks
+          axis.ticks.length = unit(0.2, "cm"),
+          axis.text.x = element_text(color="black"),
+          axis.text.y = element_text(color="black"),
+          axis.text = element_text(size=12), 
+          axis.title = element_text(size =14),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12),
+          plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+
+
+
+# Specify columns to exclude (e.g., first 3 columns and the last column)
+columns_to_exclude <- c(1:3, ncol(svs_imputed_cats_orig))
+
+# Select columns to calculate missing data proportion
+columns_to_check <- setdiff(1:ncol(svs_imputed_cats_orig), columns_to_exclude)
+
+# Count missing values per row in selected columns
+missing_counts <- rowSums(is.na(svs_imputed_cats_orig[, columns_to_check]))
+
+# Calculate proportion of missing values per row
+proportion_missing <- missing_counts / length(columns_to_check)
+
+# Add proportion of missing values as a new column to the dataframe
+svs_imputed_cats_orig$Proportion_Missing <- proportion_missing
+
+ggplot(data = svs_imputed_cats_orig, aes(Proportion_Missing, fill = category))+
+  geom_histogram(position = "dodge")
+```
+
+# SFS for TE=SV
+```{r}
+library(MetBrewer)
+
+df_w_header <- read.csv("/home/nathan/Desktop/github/282/test/bimbam_282_w_header_oldIDs_20240609.csv", header = TRUE)
+
+
+
+te_equal_sv <- read.table("./test/te_equal_sv_sv_ids.txt")
+sv_categories <- read.csv("~/Desktop/github/282/test/sv_categories.csv", header = TRUE)
+b73_oh43_intersect_tes <- read.table("./test/B73_Oh43_bedtools_intersect_TEs.bed", header = FALSE)
+
+df_te_equal_sv <- df_w_header %>% 
+  filter(ID %in% te_equal_sv$V1)
+
+df_te_equal_sv_w_intersect_tes <- merge(df_te_equal_sv, b73_oh43_intersect_tes[, c("V4", "V8")], by.x = "ID", by.y = "V8", all.x = TRUE)
+
+df_te_equal_sv_w_intersect_tes <- df_te_equal_sv_w_intersect_tes[!is.na(df_te_equal_sv_w_intersect_tes$V4), ]
+df_te_equal_sv_w_intersect_tes_sfs <- sfs(df_te_equal_sv_w_intersect_tes[,-ncol(df_te_equal_sv_w_intersect_tes)], 2)
+df_te_equal_sv_w_intersect_tes_sfs <- merge(df_te_equal_sv_w_intersect_tes_sfs,b73_oh43_intersect_tes[, c("V4", "V8")], by.x = "key", by.y = "V8", all.x = TRUE)
+
+
+# SFSs
+df_te_equal_sv_w_intersect_tes_sfs <- df_te_equal_sv_w_intersect_tes_sfs %>% 
+  rename(TE_superfamily = V4)
+
+
+df_w_header_sfs <- sfs(df_w_header, 2)
+
+
+# TE = SV SFS Plot (all TE=SV based on Manisha's analysis, regardless if they intersect TE in bedtools) --> 1247 TEs couldn't be found through bedtools intersect
+df_te_equal_sv_sfs <- sfs(df_te_equal_sv, 2)
+
+
+
+
+######################
+## Figure for paper ##
+######################
+png("./test/sfs_te_equal_sv.png", width = 8, height = 6 , res = 400, units = "in")
+ggplot(df_te_equal_sv_sfs, aes(x=alt_freq))+
+geom_histogram(col=I("black"), fill = "grey", linewidth = 0.4)+
+ylim(c(0,3000))+
+scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0,0))+
+scale_y_continuous(breaks = seq(0, 3000, by = 500), expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+xlab("Allele Frequency")+
+ylab("Number of SVs ")+
+# ggtitle("Site-frequency Spectrum of SV-present alleles")+
+# scale_fill_discrete(name = "Reference Genotype")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.background = element_rect(fill = "white"),  # Set plot background color to white
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        axis.ticks = element_line(size = 0.5),  # Customize tick marks
+        axis.ticks.length = unit(0.2, "cm"),
+        axis.text.x = element_text(color="black"),
+        axis.text.y = element_text(color="black"),
+        axis.text = element_text(size=12), 
+        axis.title = element_text(size =14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+dev.off()
+
+
+
+
+
+
+## Change the TE Superfamily strings to something nicer for images
+# TE_superfamily_strings<- list(
+#   "Gypsy_LTR_retrotransposon" = "Ty3/Gypsy",
+#   "Tc1_Mariner_TIR_transposon" = "Tc1/Mariner",
+#   "hAT_TIR_transposon" = "hAT",
+#   "RTE_LINE_retrotransposon" = "RTE",
+#   "PIF_Harbinger_TIR_transposon" = "Pif/Harbinger",
+#   "CACTA_TIR_transposon" = "CACTA",
+#   "Copia_LTR_retrotransposon" = "Ty1/Copia",
+#   "LINE_element" = "Unknown LINE",
+#   "L1_LINE_retrotransposon" = "L1 LINE",
+#   "Mutator_TIR_transposon" = "Mutator",
+#   "helitron " = "Helitron",
+#   "LTR_retrotransposon" = "Unknown LTR"
+# )
+
+df_te_equal_sv_w_intersect_tes_sfs <- df_te_equal_sv_w_intersect_tes_sfs %>%
+  mutate(TE_superfamily = case_when(
+    TE_superfamily ==   "Gypsy_LTR_retrotransposon" ~ "Ty3/Gypsy",
+    TE_superfamily == "Tc1_Mariner_TIR_transposon" ~ "Tc1/Mariner",
+    TE_superfamily == "hAT_TIR_transposon" ~ "hAT",
+    TE_superfamily == "RTE_LINE_retrotransposon" ~ "RTE",
+    TE_superfamily == "PIF_Harbinger_TIR_transposon" ~ "Pif/Harbinger",
+    TE_superfamily == "CACTA_TIR_transposon" ~ "CACTA",
+    TE_superfamily == "Copia_LTR_retrotransposon" ~ "Ty1/Copia",
+    TE_superfamily == "LINE_element" ~ "Unknown LINE",
+    TE_superfamily == "L1_LINE_retrotransposon" ~ "L1 LINE",
+    TE_superfamily == "Mutator_TIR_transposon" ~ "Mutator",
+    TE_superfamily == "helitron " ~ "Helitron",
+    TE_superfamily == "LTR_retrotransposon" ~ "Unknown LTR",
+    TRUE~TE_superfamily
+))
+  
+
+df_te_equal_sv_w_intersect_tes_sfs_btw_0.25_0.75 <- df_te_equal_sv_w_intersect_tes_sfs %>% 
+  filter(alt_freq >= 0.25) %>% 
+  filter(alt_freq <= 0.75)
+df_te_equal_sv_w_intersect_tes_sfs_less_0.25 <- df_te_equal_sv_w_intersect_tes_sfs %>% 
+  filter(alt_freq < 0.25)
+df_te_equal_sv_w_intersect_tes_sfs_more_0.75 <- df_te_equal_sv_w_intersect_tes_sfs %>% 
+  filter(alt_freq > 0.75)
+
+
+
+# min_value <- min(df_te_equal_sv_w_intersect_tes_sfs$alt_freq)
+# max_value <- max(df_te_equal_sv_w_intersect_tes_sfs$alt_freq)
+
+custom_breaks <- seq(0, 1, by = 0.1)
+
+sorted_categories <- df_te_equal_sv_w_intersect_tes_sfs %>%
+  arrange(desc(alt_freq)) %>%
+  pull(TE_superfamily)
+
+java_colors <-  c("Ty3/Gypsy" = "#663171",
+"Tc1/Mariner" = "#8C345B",
+"Unknown LTR" = "#B23746",
+"hAT" = "#D13F34",
+"RTE" = "#DB542F",
+"Pif/Harbinger" = "#E5692A",
+"CACTA" = "#E87A39",
+"Ty1/Copia" = "#E5885D",
+"Unknown LINE" = "#E29581",
+"L1 LINE" = "#A78E7B",
+"Mutator" = "#597F68",
+"helitron" = "#0C7156")
+
+# I also like the following color palettes from MetBrewer:
+#  - Johnson
+#  - OKeeffe1
+ 
+
+
+# Ingres= list(c("#041d2c", "#06314e", "#18527e", "#2e77ab", "#d1b252", "#a97f2f", "#7e5522", "#472c0b"), c(4, 5, 3, 6, 2, 7, 1, 8), colorblind=TRUE)
+# Java = list(c("#663171", "#cf3a36", "#ea7428", "#e2998a", "#0c7156"), c(1, 4, 2, 5, 3), colorblind=TRUE)
+# Johnson = list(c("#a00e00", "#d04e00", "#f6c200", "#0086a8", "#132b69"), c(3, 1, 4, 2, 5), colorblind=TRUE)
+# OKeeffe1 = list(c("#6b200c", "#973d21", "#da6c42", "#ee956a", "#fbc2a9", "#f6f2ee", "#bad6f9", "#7db0ea", "#447fdd", "#225bb2", "#133e7e"), c(8, 6, 1, 4, 10, 3, 11, 5, 2, 7, 9), colorblind=TRUE)
+# Veronese = list(c("#67322e", "#99610a", "#c38f16", "#6e948c", "#2c6b67", "#175449", "#122c43"), c(5, 1, 7, 2, 3, 6, 4), colorblind=TRUE)
+
+
+
+
+
+# Stacked plot of all TE=SV TE superfamlies
+#######################
+## Figures for paper ##
+#######################
+te_equal_sv_stacked_sfs <- ggplot(df_te_equal_sv_w_intersect_tes_sfs, aes(alt_freq, fill=TE_superfamily))+
+  geom_histogram(col=I("black"), linewidth = 0.4 ,breaks = seq(0, 1, by = 0.05))+
+  # geom_histogram(col=I("black"), fill = "grey", linewidth = 0.4)+
+  scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0, 0))+
+  scale_y_continuous(breaks = seq(0, 2000, by = 250), expand = c(0, 0))+
+  # xlab("Allele Frequency")+
+  # ylab("Number of TEs ")+
+  labs(fill = "TE Superfamily", x="Allele Frequency", y="Number of TEs")+
+  scale_fill_manual(values = java_colors)+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.background = element_rect(fill = "white"),  # Set plot background color to white
+        panel.background = element_rect(fill = "white"),
+        panel.border = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_line(colour = "black"),
+        axis.ticks = element_line(size = 0.5),  # Customize tick marks
+        axis.ticks.length = unit(0.2, "cm"),
+        axis.text.x = element_text(color="black"),
+        axis.text.y = element_text(color="black"),
+        axis.text = element_text(size=12),
+        axis.title = element_text(size =14),
+        legend.title = element_text(size = 14),
+        legend.text = element_text(size = 12),
+        plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+
+png('./test/te_equal_sv_stacked_sfs.png', width = 8, height = 6 , res = 400, units = "in")
+te_equal_sv_stacked_sfs
+dev.off()
+# 
+# png('./test/te_equal_sv_sfs_bedtools_intersect.png', width = 12, height = 10 , res = 400, units = "in")
+# te_equal_sv_sfs <- ggplot(df_te_equal_sv_w_intersect_tes_sfs, aes(alt_freq))+
+#   geom_histogram(col=I("black"), fill = "grey", linewidth = 0.4, breaks = seq(0, 1, by = 0.05))+
+#   scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0, 0))+
+#   scale_y_continuous(expand = c(0, 0))+
+#   # xlab("Allele Frequency")+
+#   # ylab("Number of TEs ")+
+#   labs(fill = "TE Superfamily", x="Allele Frequency", y="Number of TEs")+
+#   # scale_fill_manual(values = java_colors)+
+#   theme_minimal()+
+#   theme(plot.title = element_text(hjust = 0.5),
+#         # plot.background = element_rect(fill = "white"),  # Set plot background color to white
+#         # panel.background = element_rect(fill = "white"),
+#         panel.border = element_blank(),
+#         panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         axis.line = element_line(colour = "black"),
+#         axis.ticks = element_line(size = 0.5),  # Customize tick marks
+#         axis.ticks.length = unit(0.2, "cm"),
+#         axis.text.x = element_text(color="black"),
+#         axis.text.y = element_text(color="black"))
+# dev.off()
+
+# p2 <- ggplot(df_te_equal_sv_w_intersect_tes_sfs_btw_0.25_0.75, aes(alt_freq, fill=TE_superfamily))+
+#   geom_histogram(breaks = seq(0.25, 0.75, by = 0.05))+
+#   # xlab("Allele Frequency")+
+#   # ylab("Number of TEs ")+
+#   # title("0.25<=MAF<= 0.75 for TE=SV")+
+#   xlim(0.25,0.75)+
+#   labs(fill = "TE Superfamily", x="Allele Frequency", y="Number of TEs", title="0.25<= MAF<= 0.75 for TE=SV")+
+#   scale_x_continuous(breaks = seq(0.25, 0.75, by = 0.05))
+# 
+# p3 <- ggplot(df_te_equal_sv_w_intersect_tes_sfs_less_0.25, aes(alt_freq, fill=TE_superfamily))+
+#   geom_histogram(breaks = seq(0, 0.25, by = 0.05))+
+#   # xlab("Allele Frequency")+
+#   # ylab("Number of TEs ")+
+#   # title("MAF < 0.25 TE=SV")+
+#   xlim(0,0.25)+
+#   labs(fill = "TE Superfamily", x="Allele Frequency", y="Number of TEs", title="MAF < 0.25 TE=SV")+
+#   scale_x_continuous(breaks = seq(0, 0.25, by = 0.05))
+# 
+# p4 <- ggplot(df_te_equal_sv_w_intersect_tes_sfs_more_0.75, aes(alt_freq, fill=TE_superfamily))+
+#   geom_histogram(breaks = seq(0.75, 1, by = 0.05))+
+#   # xlab("Allele Frequency")+
+#   # ylab("Number of TEs ")+
+#   # title("MAF > 0.75 TE=SV")+
+#   xlim(0.75,1)+
+#   labs(fill = "TE Superfamily", x="Allele Frequency", y="Number of TEs", title="MAF > 0.75 TE=SV")+
+#   scale_x_continuous(breaks = seq(0.75, 1, by = 0.05))
+
+
+sfs_te_superfamily <- function(df,title){ # returns ggplot geom_bar plot
+  category_counts <- table(df$TE_superfamily)
+
+# Order categories by frequency counts (lowest to highest)
+ordered_categories <- names(sort(category_counts))
+df$TE_superfamily <- factor(df$TE_superfamily, levels = ordered_categories)
+plot <-ggplot(df, aes(TE_superfamily, fill=TE_superfamily)) +
+  geom_bar(col=I("black"), linewidth = 0.4, show.legend = FALSE) +
+  labs(fill = "TE Superfamily", x="TE Superfamily", y="Number of TEs",  title=title)+
+  scale_fill_manual(values = java_colors)+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.background = element_rect(fill = "white"),  # Set plot background color to white
+          panel.background = element_rect(fill = "white"),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black"),
+          axis.ticks = element_line(size = 0.5),  # Customize tick marks
+          axis.ticks.length = unit(0.2, "cm"),
+          axis.text.x = element_text(color="black",angle = 45, hjust = 1),
+          axis.text.y = element_text(color="black"),
+          axis.text = element_text(size=12), 
+          axis.title = element_text(size =14),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12),
+          plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+return(plot)
+
+}
+
+pcat2_func <-sfs_te_superfamily(df_te_equal_sv_w_intersect_tes_sfs_btw_0.25_0.75,"0.25 \u2264 MAF \u2264 0.75 for TE = SV")
+pcat3_func <- sfs_te_superfamily(df_te_equal_sv_w_intersect_tes_sfs_less_0.25, "MAF < 0.25 TE=SV")
+pcat4_func <- sfs_te_superfamily(df_te_equal_sv_w_intersect_tes_sfs_more_0.75, "MAF \u2265 0.75 TE = SV")
+
+######################
+## Figure for paper #
+######################
+grouped_te_superfamily_plots <- ggarrange(te_equal_sv_stacked_sfs+labs(tag = 'A.', title="SFS for TE = SV by TE Superfamily")+theme(legend.key.size = unit(0.5, "cm"), legend.title = element_text(size = 11,),legend.text = element_text(size = 10)),pcat2_func+labs(tag = 'B.'), pcat3_func+labs(tag = 'C.'), pcat4_func+labs(tag = 'D.'))
+png('./test/te_equal_sv_stacked_sfs_w_sfs_0.25_0.75.png', width = 15, height = 10 , res = 400, units = "in")
+grouped_te_superfamily_plots
+dev.off()
+
+category_counts <- table(df_te_equal_sv_w_intersect_tes_sfs_more_0.75$TE_superfamily)
+
+# Order categories by frequency counts (lowest to highest)
+ordered_categories <- names(sort(category_counts))
+
+# Convert category to factor with ordered levels
+df_te_equal_sv_w_intersect_tes_sfs_more_0.75$TE_superfamily <- factor(df_te_equal_sv_w_intersect_tes_sfs_more_0.75$TE_superfamily, levels = ordered_categories)
+
+
+df_w_categories <- merge(df_w_header, sv_categories, by.x="ID", by.y = "sv_id", all = TRUE)
+df_w_categories <- df_w_categories %>% 
+    mutate(category = case_when(
+      category == "Category_1"~ "No TE SV",
+      category == "Category_2"~ "Incomplete TE SV",
+      category == "Category_3"~ "TE = SV",
+      category == "Category_4"~ "Multi TE SV",
+      category == "Category_5"~ "TE Within SV",
+      TRUE~category
+    ))
+
+
+
+df_w_cats_sfs <- sfs(df_w_categories[,-ncol(df_w_categories)],2)
+matching_indices <- match(df_w_cats_sfs$key,df_w_categories$ID)
+df_w_cats_sfs$category <- df_w_categories$category[matching_indices]
+
+
+###################################################################################################################
+###################################################################################################################
+
+
+df_w_cats_sfs <- df_w_cats_sfs %>% 
+  mutate(bin = cut(alt_freq, breaks = seq(0, 1.1, by = 0.1), labels = FALSE))
+
+
+df_w_cats_sfs_summary <- df_w_cats_sfs %>%
+  group_by(bin, category) %>%
+  summarise(total_value = sum(alt_freq)) %>%
+  ungroup()
+
+df_w_cats_sfs_summary <- df_w_cats_sfs_summary %>%
+  mutate(category = factor(category)) %>%
+  bind_rows(df_w_cats_sfs_summary %>% 
+              group_by(bin) %>% 
+              summarise(category = "Combined", 
+                        total_value = sum(total_value)))
+
+# df_sfs_sv_cats_summary_cat3_combined <- df_w_cats_sfs_summary %>% 
+#   filter(category == "Category_3" | category == "combined") %>% 
+#   mutate(category = case_when(
+#     category == "Category_3" ~ "TE = SV",
+#     category == "combined" ~ "All SVs",
+#     TRUE ~ category  # Keep original value if no replacement condition is met
+#   ))
+
+df_w_cats_sfs_summary_combined <- df_w_cats_sfs_summary %>%
+  group_by(category) %>%
+  mutate(sum_total_value = sum(total_value)) %>%  # Calculate sum of total_value within each category
+  ungroup()
+
+df_w_cats_sfs_summary_combined <- df_w_cats_sfs_summary_combined %>%
+  mutate(proportion = total_value / sum_total_value)
+
+
+######################
+## Figure for paper ##
+######################
+png("./test/sfs_all_sv_categories_proportions.png", width = 8, height = 6 , res = 400, units = "in")
+df_w_cats_sfs_summary_combined_ggplot2 <- drop_na(df_w_cats_sfs_summary_combined) %>% 
+  ggplot(aes(x = as.factor(bin), y = proportion, fill = category)) +
+  geom_bar(stat = "identity", position = "dodge",col=I("black"), linewidth = 0.4) +
+  scale_x_discrete(expand = c(0,0), 
+                   labels=c("0.0-0.9", "0.1-1.9","0.2-2.9","0.3-3.9","0.4-4.9",
+                            "0.5-5.9","0.6-6.9","0.7-7.9","0.8-8.9","0.9-1.0"))+
+  scale_y_continuous(expand = c(0,0))+
+  expand_limits(x = 0, y = 0)+
+  scale_fill_manual(name = "SV Category", values = as.vector(met.brewer("Java", n=length(unique(df_w_cats_sfs_summary_combined$category)))))+
+  labs(x ="Allele Frequency", y = "Proportion of SVs ")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+      plot.background = element_rect(fill = "white"),  # Set plot background color to white
+      panel.background = element_rect(fill = "white"),
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks = element_line(size = 0.5),  # Customize tick marks
+      axis.ticks.length = unit(0.2, "cm"),
+      axis.text.x = element_text(color="black", angle=45, vjust = 0.6),
+      axis.text.y = element_text(color="black"),
+      axis.text = element_text(size=12), 
+      axis.title = element_text(size =14),
+      legend.title = element_text(size = 14),
+      legend.text = element_text(size = 12),
+      plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+df_w_cats_sfs_summary_combined_ggplot2
+dev.off()
+
+
+png("/home/nathan/Desktop/github/282/test/te_equal_sv_and_categories_vs_combined_proportions.png",width = 15, height = 6 , res = 400, units = "in")
+te_equal_sv_and_categories_vs_combined_proportions <- ggarrange(df_sfs_sv_cats_summary_cat3_combined_ggplot2+labs(tag = 'A.'),df_w_cats_sfs_summary_combined_ggplot2+labs(tag = 'B.'))
+te_equal_sv_and_categories_vs_combined_proportions
+dev.off()
+
+########################################
+### Now let's try to figure out why we are seeing a LARGE proportion of Incomplete TE = SV category with higher allele freqs. ###
+########################################
+
+# df <- read.csv("~/Desktop/github/282/bimbam_282_wo_header_NAs_not_questionmarks_oldsvIDformat.csv", header=FALSE)
+df_w_header <- read.csv("/home/nathan/Desktop/github/282/test/bimbam_282_w_header_oldIDs_20240609.csv", header = TRUE)
+te_equal_sv <- read.table("~/Desktop/github/282/test/te_equal_sv_sv_ids.txt")
+sv_categories <- read.csv("~/Desktop/github/282/test/sv_categories.csv", header = TRUE)
+b73_oh43_intersect_tes <- read.table("./test/B73_Oh43_bedtools_intersect_TEs.bed", header = FALSE)
+
+df_te_equal_sv <- df_w_header %>% 
+  filter(ID %in% te_equal_sv$V1)
+
+df_te_equal_sv_w_intersect_tes <- merge(df_te_equal_sv, b73_oh43_intersect_tes[, c("V4", "V8")], by.x = "ID", by.y = "V8", all.x = TRUE)
+
+df_te_equal_sv_w_intersect_tes <- df_te_equal_sv_w_intersect_tes[!is.na(df_te_equal_sv_w_intersect_tes$V4), ]
+df_te_equal_sv_w_intersect_tes_sfs <- sfs(df_te_equal_sv_w_intersect_tes[,-ncol(df_te_equal_sv_w_intersect_tes)], 2)
+df_te_equal_sv_w_intersect_tes_sfs <- merge(df_te_equal_sv_w_intersect_tes_sfs,b73_oh43_intersect_tes[, c("V4", "V8")], by.x = "key", by.y = "V8", all.x = TRUE)
+
+
+# SFSs
+df_te_equal_sv_w_intersect_tes_sfs <- df_te_equal_sv_w_intersect_tes_sfs %>% 
+  rename(TE_superfamily = V4)
+
+
+df_w_header_sfs <- sfs(df_w_header, 2)
+df_w_categories <- merge(df_w_header, sv_categories, by.x="ID", by.y = "sv_id", all = TRUE)
+df_w_categories <- df_w_categories %>% 
+    mutate(category = case_when(
+      category == "Category_1"~ "No TE SV",
+      category == "Category_2"~ "Incomplete TE SV",
+      category == "Category_3"~ "TE = SV",
+      category == "Category_4"~ "Multi TE SV",
+      category == "Category_5"~ "TE Within SV",
+      TRUE~category
+    ))
+
+
+# Specify columns to exclude (e.g., first 3 columns and the last column)
+columns_to_exclude <- c(1:3, ncol(df_w_categories))
+
+# Select columns to calculate missing data proportion
+columns_to_check <- setdiff(1:ncol(df_w_categories), columns_to_exclude)
+
+# Count missing values per row in selected columns
+missing_counts <- rowSums(is.na(df_w_categories[, columns_to_check]))
+
+# Calculate proportion of missing values per row
+proportion_missing <- missing_counts / length(columns_to_check)
+
+# Add proportion of missing values as a new column to the dataframe
+df_w_categories$Proportion_Missing <- proportion_missing
+
+df_w_header_sfs_cats_prop_missing <- merge(df_w_header_sfs,df_w_categories[,c("ID","category","Proportion_Missing")], by.x = "key", by.y = "ID" )
+
+df_w_header_sfs_cats_prop_missing_remove_50perc_missing <- df_w_header_sfs_cats_prop_missing %>%
+  filter(alt_freq > 0.3)
+
+
+df_w_header_sfs_cats_prop_missing_remove_50perc_missing <- df_w_header_sfs_cats_prop_missing_remove_50perc_missing %>% 
+  mutate(bin = cut(alt_freq, breaks = seq(0, 1.1, by = 0.1), labels = FALSE))
+
+
+df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary <- df_w_header_sfs_cats_prop_missing_remove_50perc_missing %>%
+  group_by(bin, category) %>%
+  summarise(total_value = sum(alt_freq)) %>%
+  ungroup()
+
+df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary <- df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary %>%
+  mutate(category = factor(category)) %>%
+  bind_rows(df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary %>% 
+              group_by(bin) %>% 
+              summarise(category = "Combined", 
+                        total_value = sum(total_value)))
+
+df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary_combined <- df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary %>%
+  group_by(category) %>%
+  mutate(sum_total_value = sum(total_value)) %>%  # Calculate sum of total_value within each category
+  ungroup()
+
+df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary_combined <- df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary_combined %>%
+  mutate(proportion = total_value / sum_total_value)
+
+df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary_combined_ggplot2 <- drop_na(df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary_combined) %>% 
+  ggplot(aes(x = as.factor(bin), y = proportion, fill = category)) +
+  geom_bar(stat = "identity", position = "dodge",col=I("black"), linewidth = 0.4) +
+  scale_x_discrete(expand = c(0,0), 
+                   labels=c("0.0-0.9", "0.1-1.9","0.2-2.9","0.3-3.9","0.4-4.9",
+                            "0.5-5.9","0.6-6.9","0.7-7.9","0.8-8.9","0.9-1.0"))+
+  scale_y_continuous(expand = c(0,0))+
+  expand_limits(x = 0, y = 0)+
+  scale_fill_manual(name = "SV Category", values = as.vector(met.brewer("Java", n=length(unique(df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary_combined$category)))))+
+  labs(x ="Allele Frequency", y = "Proportion of SVs ")+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+      plot.background = element_rect(fill = "white"),  # Set plot background color to white
+      panel.background = element_rect(fill = "white"),
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line = element_line(colour = "black"),
+      axis.ticks = element_line(size = 0.5),  # Customize tick marks
+      axis.ticks.length = unit(0.2, "cm"),
+      axis.text.x = element_text(color="black", angle=45, vjust = 0.6),
+      axis.text.y = element_text(color="black"),
+      axis.text = element_text(size=12), 
+      axis.title = element_text(size =14),
+      legend.title = element_text(size = 14),
+      legend.text = element_text(size = 12),
+      plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+df_w_header_sfs_cats_prop_missing_remove_50perc_missing_summary_combined_ggplot2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ggplot(data = df_w_categories, aes(Proportion_Missing, fill = category))+
+  geom_histogram(position = "dodge")
+
+
+
+
+
+
+
+# Filter SFS dataset to only look within 0.91-1.0
+df_sfs_sv_cats_w_prop_missing_high_alt_freq <- df_sfs_sv_cats_w_prop_missing %>% 
+  filter(alt_freq > 0.9)
+
+ggplot(data = df_sfs_sv_cats_w_prop_missing_high_alt_freq, aes(x=Proportion_Missing, y=alt_freq, col=category))+
+  geom_point()
+
+ggplot(data = df_sfs_sv_cats_w_prop_missing_high_alt_freq, aes(x=category, y=Proportion_Missing))+
+  geom_bar(stat = "identity")
+
+df_sfs_sv_cats_w_prop_missing_high_alt_freq_inc_te_sv <- df_sfs_sv_cats_w_prop_missing_high_alt_freq %>% 
+  filter(category == "Incomplete TE SV")
+
+ggplot(data = df_sfs_sv_cats_w_prop_missing_high_alt_freq_inc_te_sv, aes(x=Proportion_Missing, y=alt_freq, col=category))+
+  geom_point()
+
+
+
+
+
+
+
+
+
+
+
+
+#######################
+## Figures for paper ##
+#######################
+png("./test/sfs_all_sv_categories.png", width = 8, height = 6 , res = 400, units = "in")
+ggplot(df_w_cats_sfs, aes(alt_freq, fill=category))+
+  geom_histogram(col=I("black"), linewidth = 0.4, )+
+  scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0,0))+
+  scale_y_continuous(breaks = seq(0, 3000, by = 500), expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+  scale_fill_manual(name = "SV Category", values = as.vector(met.brewer("Java", n=length(unique(df_w_cats_sfs$category)))))+
+  labs(x ="Allele Frequency", y = "Number of SVs ")+
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.background = element_rect(fill = "white"),  # Set plot background color to white
+          panel.background = element_rect(fill = "white"),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black"),
+          axis.ticks = element_line(size = 0.5),  # Customize tick marks
+          axis.ticks.length = unit(0.2, "cm"),
+          axis.text.x = element_text(color="black"),
+          axis.text.y = element_text(color="black"),
+          axis.text = element_text(size=12), 
+          axis.title = element_text(size =14),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12),
+          plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+dev.off()
+
+
+###################################################################################################################
+###################################################################################################################
+
+
+
+
+# SFS showing SV categories
+#######################
+## Figures for paper ##
+#######################
+png("./test/sfs_all_sv_categories.png", width = 8, height = 6 , res = 400, units = "in")
+ggplot(df_w_cats_sfs, aes(alt_freq, fill=category))+
+  geom_histogram(col=I("black"), linewidth = 0.4, )+
+  scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0,0))+
+  scale_y_continuous(breaks = seq(0, 3000, by = 500), expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+  scale_fill_manual(name = "SV Category", values = as.vector(met.brewer("Java", n=length(unique(df_w_cats_sfs$category)))))+
+  labs(x ="Allele Frequency", y = "Number of SVs ")+
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.background = element_rect(fill = "white"),  # Set plot background color to white
+          panel.background = element_rect(fill = "white"),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black"),
+          axis.ticks = element_line(size = 0.5),  # Customize tick marks
+          axis.ticks.length = unit(0.2, "cm"),
+          axis.text.x = element_text(color="black"),
+          axis.text.y = element_text(color="black"),
+          axis.text = element_text(size=12), 
+          axis.title = element_text(size =14),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12),
+          plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+dev.off()
+  
+
+# This plot shows the major differences between each cateogry and their contribution to the SFS
+ggplot(df_w_cats_sfs, aes(alt_freq, fill=category))+
+  geom_histogram(position = "dodge")+
+  scale_fill_manual(values = as.vector(met.brewer("Java", n=length(unique(df_w_cats_sfs$category)))))
+
+```
+
+# Now lets look at the read mapping coverage and its relationship with missing data
+```{r}
+
+coverage_stats <- read.csv("./test/coverages_alignments_to_B73_V5_20240517.csv", header = FALSE)
+df_w_header <- read.csv("./test/bimbam_282_w_header_oldIDs_20240609.csv", header = TRUE)
+names(coverage_stats) <- c("genotype","avg_coverage")
+coverage_stats$genotype <- gsub('(^[0-9])', 'X\\1', coverage_stats$genotype)
+coverage_stats$genotype <-gsub('-', '.',coverage_stats$genotype)
+
+missing_data <- vector("list", length = ncol(df_w_header[-1:-3]))
+df_subset <- df_w_header[, -(1:3)]
+
+# Loop through each column
+for (i in seq_along(df_subset)) {
+  # Calculate percentage of missing data for the current column
+  missing_percentage <- mean(is.na(df_subset[[i]])) * 100
+  
+  # Store column name and percentage of missing data
+  missing_data[[i]] <- c(colnames(df_subset)[i], missing_percentage)
+}
+
+# Convert the list to a dataframe
+missing_data_df <- do.call(rbind.data.frame, missing_data)
+
+# Rename columns
+colnames(missing_data_df) <- c("Column Name", "Percentage of Missing Data")
+
+merged_sv_miss_coverage <- merge(missing_data_df, coverage_stats, by.x="Column Name", by.y = "genotype", all = TRUE)
+
+# Fill missing values with NA
+merged_sv_miss_coverage[is.na(merged_sv_miss_coverage)] <- NA
+
+
+```
+
+#####################################################
+### Linear Model of perc. missing data ~ coverage ###
+#####################################################
+```{r}
+colnames(merged_sv_miss_coverage) <- c("genotypes", "perc_missing_data", "avg_coverage")
+
+merged_sv_miss_coverage$perc_missing_data <- as.numeric(as.character(merged_sv_miss_coverage$perc_missing_data))
+# plot(merged_sv_miss_coverage$Percentage_of_Missing_Data~merged_sv_miss_coverage$avg_coverage)
+# Since B73 and Oh43 do not have nay missing data, let's remove those from the dataset
+
+merged_sv_miss_coverage_wo_B73_Oh43 <- merged_sv_miss_coverage %>% 
+  filter(genotypes != 'Oh43' & genotypes != 'B73' )
+# plot(model)
+write.table(merged_sv_miss_coverage_wo_B73_Oh43, "~/Desktop/github/282/test/282_genotypes_perc_miss_avg_cov.csv", sep = ',', row.names=FALSE, col.names=TRUE, quote=FALSE)
+
+
+
+
+lm_model <- lm(perc_missing_data~avg_coverage, data = merged_sv_miss_coverage)
+
+
+```
+
+
+```{r}
+png("./test/lm_perc_missing_data_coverage_all_genos_wo_B73_Oh43.png", width = 8, height = 6 , res = 400, units = "in")
+ggplot(data = merged_sv_miss_coverage_wo_B73_Oh43, aes(x = avg_coverage, y = as.numeric(Percentage_of_Missing_Data)))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  scale_x_continuous(limits = c(0,10), expand = c(0,0))+
+  scale_y_continuous(limits = c(0,100),expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+  labs(x ="Realized Coverage", y = "Percent Missing Data ")+
+  ylim(0,100)+
+  xlim(0,max(merged_sv_miss_coverage_wo_B73_Oh43$avg_coverage) +5)+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.background = element_rect(fill = "white"),  # Set plot background color to white
+    panel.background = element_rect(fill = "white"),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.ticks = element_line(size = 0.5),  # Customize tick marks
+    axis.ticks.length = unit(0.2, "cm"),
+    axis.text.x = element_text(color="black"),
+    axis.text.y = element_text(color="black"),
+    axis.text = element_text(size=12), 
+    axis.title = element_text(size =14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 12),
+    plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+# + annotate("text", x = 22, y = 75, label =expression(Adj.~R^2 == 0.067), parse = TRUE, size = 5)
+dev.off()
+```
+<!-- # Testing ways to remove outliers before fitting to exponential decay -->
+<!-- ```{r} -->
+<!-- library(dplyr) -->
+<!-- library(ggplot2) -->
+<!-- library(broom) -->
+
+<!-- # Generate example data -->
+<!-- # Identify and remove outliers using IQR method -->
+<!-- Q1 <- quantile(merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data, 0.25) -->
+<!-- Q3 <- quantile(merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data, 0.75) -->
+<!-- IQR <- Q3 - Q1 -->
+
+<!-- # Define lower and upper bounds for outliers -->
+<!-- lower_bound <- Q1 - 1.5 * IQR -->
+<!-- upper_bound <- Q3 + 1.5 * IQR -->
+
+<!-- # Filter data to remove outliers -->
+<!-- filtered_data <- merged_sv_miss_coverage_wo_B73_Oh43 %>% -->
+<!--   filter(merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data >= lower_bound & merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data <= upper_bound) -->
+
+<!-- # The above removes 31 outliers.... that's not realistic -->
+<!-- ``` -->
+<!-- Another method for removing outliers (Modified Z score) -->
+<!-- ```{r} -->
+<!-- MAD <- mad(merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data) -->
+<!-- merged_sv_miss_coverage_wo_B73_Oh43$modified_z_score <- 0.6745 * (merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data - median(merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data)) / MAD -->
+<!-- # filtered_data_modzscore <- merged_sv_miss_coverage_wo_B73_Oh43 %>% filter(abs(modified_z_score) <= 3.5) -->
+<!-- # 6 outliers removed -->
+<!-- ``` -->
+Reg z score to find outliers in data
+```{r}
+merged_sv_miss_coverage_wo_B73_Oh43$z_score <- (merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data - mean(merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data)) / sd(merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data)
+merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore <- merged_sv_miss_coverage_wo_B73_Oh43 %>% filter(abs(z_score) <= 3)
+# also 6 outliers
+```
+# Let's see what a exp model looks like
+```{r}
+# Using nls()
+exp_model <- nls(Percentage_of_Missing_Data~ a* exp(b * avg_coverage), data=merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore, start = list(a = 1, b = 0.01))
+summary(exp_model)
+
+predict_exp <- predict(exp_model, data.frame(x = merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$avg_coverage))
+
+#MSE - exp
+mse_exponential <- mean((merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$Percentage_of_Missing_Data - predict_exp)^2)
+#R^2 - exp
+rss_exponential <- sum((merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$Percentage_of_Missing_Data - predict_exp)^2)
+tss <- sum((merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$Percentage_of_Missing_Data - mean(merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$Percentage_of_Missing_Data))^2)
+r_squared_exponential <- 1 - rss_exponential / tss
+
+# Plotting exp.
+ggplot(data.frame(merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$avg_coverage, merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$Percentage_of_Missing_Data), aes(merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$avg_coverage, merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$Percentage_of_Missing_Data)) +
+  geom_point() +
+  
+  geom_line(aes(y = predict_exp), color = "red") +
+  labs(title = "Exponential Model Fit",
+       x = "x",
+       y = "y") +
+  theme_minimal()
+
+
+
+
+
+
+
+
+```
+
+```{r}
+exp_model_check <- lm(log(Percentage_of_Missing_Data)~avg_coverage, data = merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore)
+summary(exp_model_check)
+avg_coverage_df <- as.data.frame(merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$avg_coverage)
+
+predict_exp_check <- exp(predict(exp_model_check, x = avg_coverage_df))
+
+ggplot(data.frame(merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$avg_coverage, merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$Percentage_of_Missing_Data), aes(merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$avg_coverage, merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$Percentage_of_Missing_Data)) +
+  geom_point() +
+  geom_line(aes(y = predict_exp_check), color = "red") +
+  labs(title = "Linear vs Exponential Model",
+       x = "x",
+       y = "y") +
+  theme_minimal()
+```
+# Check again using log
+```{r}
+model_log <- lm(log(Percentage_of_Missing_Data)~avg_coverage, data = merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore)
+summary(model_log)
+
+
+prediction <- exp(predict(model_log, newdata = merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore, interval = "prediction", level = 0.95))
+
+plot(Percentage_of_Missing_Data~avg_coverage, data=merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore, main="Exponential Regression", xlab="Avg. Coverage", 
+     ylab="Percentage of Missing Data", pch=19)
+lines(merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$avg_coverage, prediction[,1], col="red", lty=2)
+lines(merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$avg_coverage, prediction[,2], col="blue", lty=2)
+lines(merged_sv_miss_coverage_wo_B73_Oh43_rm_outliers_zscore$avg_coverage, prediction[,3], col="blue", lty=2)
+legend("topright", legend="Exponential Regression", col="red", lwd=2)
+
+```
+
+
+
+
+
+
+
+
+
+
+# Let's check for outliers
+```{r}
+lm_model_wo_B73_Oh43 <- lm(Percentage_of_Missing_Data~avg_coverage, data = merged_sv_miss_coverage_wo_B73_Oh43)
+summary(lm_model_wo_B73_Oh43)
+```
+
+```{r}
+plot(lm_model_wo_B73_Oh43)
+
+```
+
+# Looks like genotypes in lines 263 and 31 are outlines 
+```{r}
+merged_sv_miss_coverage_wo_B73_Oh43[c(31,263),]
+```
+
+# Looks like row 31 (B57 genotype) is an outlier
+```{r}
+wo_B73_Oh43_B57_VaW6 <- merged_sv_miss_coverage_wo_B73_Oh43 %>% 
+  slice(-c(31,263))
+model_wo_B73_Oh43_B57_VaW6 <- lm(Percentage_of_Missing_Data~avg_coverage, data = wo_B73_Oh43_B57_VaW6)
+# plot(model_wo_B57)
+```
+
+There are still a couple genotypes with high leverage, but still within the 0.5 residuals vs leverage plot
+```{r}
+plot(model_wo_B73_Oh43_B57_VaW6)
+```
+```{r}
+wo_B73_Oh43_B57_VaW6[c(22,88,265,270),]
+```
+# Let's remove some genotypes that have high residuals and high leverage
+```{r}
+wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811 <- wo_B73_Oh43_B57_VaW6 %>% 
+  slice(-c(22,88,265,270))
+model_wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811 <- lm(Percentage_of_Missing_Data~avg_coverage, data = wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811)
+plot(model_wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811)
+```
+
+```{r}
+wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811[c(5),]
+```
+```{r}
+wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811_A554 <- wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811 %>% 
+  slice(-c(5))
+model_wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811_A554 <- lm(Percentage_of_Missing_Data~avg_coverage, data = wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811_A554)
+plot(model_wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811_A554)
+```
+```{r}
+summary(model_wo_B73_Oh43_B57_VaW6_B104_CML341_W22_3811_A554)
+
+```
+
+
+# Looks like row 264 (VaW6 genotype) is also an outlier
+```{r}
+wo_B57_VaW6 <- wo_B57 %>% 
+  slice(-264)
+model_wo_B57_VaW6 <- lm(Percentage_of_Missing_Data~avg_coverage, data = wo_B57_VaW6)
+# plot(model_wo_B57)
+```
+
+```{r}
+plot(model_wo_B57_VaW6)
+
+```
+
+```{r}
+wo_B57_VaW6[272,]
+```
+
+# Looks like row 272 (38-11 genotype) is also an outlier
+```{r}
+wo_B57_VaW6_3811 <- wo_B57_VaW6 %>% 
+  slice(-272)
+model_wo_B57_VaW6_3811 <- lm(Percentage_of_Missing_Data~avg_coverage, data = wo_B57_VaW6_3811)
+plot(model_wo_B57_VaW6_3811)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Let's see what a exp model looks like
+```{r}
+# Using nls()
+exp_model <- nls(Percentage_of_Missing_Data~ a* exp(b * avg_coverage), data=merged_sv_miss_coverage_wo_B73_Oh43, start = list(a = 1, b = 0.01))
+summary(exp_model)
+
+predict_exp <- predict(exp_model, data.frame(x = merged_sv_miss_coverage_wo_B73_Oh43$avg_coverage))
+
+#MSE - exp
+mse_exponential <- mean((merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data - predict_exp)^2)
+#R^2 - exp
+rss_exponential <- sum((merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data - predict_exp)^2)
+tss <- sum((merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data - mean(merged_sv_miss_coverage_wo_B73_Oh43$Percentage_of_Missing_Data))^2)
+r_squared_exponential <- 1 - rss_exponential / tss
+
+# Plotting exp.
+ggplot(data.frame(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage, wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data), aes(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage, wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data)) +
+  geom_point() +
+  geom_line(aes(y = predict_exp), color = "red") +
+  labs(title = "Exponential Model Fit",
+       x = "x",
+       y = "y") +
+  theme_minimal()
+
+```
+
+
+
+
+Lets try to fit it to exponentional function
+```{r}
+wo_B57_VaW6_3811_no_B73_Oh43 <- wo_B57_VaW6_3811 %>% 
+  filter(Column_Name != 'Oh43' & Column_Name != 'B73' )
+model_log <- lm(log(Percentage_of_Missing_Data)~avg_coverage, data = wo_B57_VaW6_3811_no_B73_Oh43)
+summary(model_log)
+
+
+prediction <- exp(predict(model_log, newdata = wo_B57_VaW6_3811_no_B73_Oh43, interval = "prediction", level = 0.95))
+
+plot(Percentage_of_Missing_Data~avg_coverage, data=wo_B57_VaW6_3811_no_B73_Oh43, main="Exponential Regression", xlab="Avg. Coverage", 
+     ylab="Percentage of Missing Data", pch=19)
+lines(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage, prediction[,1], col="red", lty=2)
+lines(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage, prediction[,2], col="blue", lty=2)
+lines(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage, prediction[,3], col="blue", lty=2)
+legend("topright", legend="Exponential Regression", col="red", lwd=2)
+
+
+# Using nls()
+
+exp_model <- nls(Percentage_of_Missing_Data~ a* exp(b * avg_coverage), data=wo_B57_VaW6_3811_no_B73_Oh43, start = list(a = 1, b = 0.01))
+summary(exp_model)
+
+predict_exp <- predict(exp_model, data.frame(x = wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage))
+#MSE - exp
+mse_exponential <- mean((wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data - predict_exp)^2)
+#R^2 - exp
+rss_exponential <- sum((wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data - predict_exp)^2)
+tss <- sum((wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data - mean(wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data))^2)
+r_squared_exponential <- 1 - rss_exponential / tss
+
+# Plotting exp.
+ggplot(data.frame(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage, wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data), aes(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage, wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data)) +
+  geom_point() +
+  geom_line(aes(y = predict_exp), color = "red") +
+  labs(title = "Exponential Model Fit",
+       x = "x",
+       y = "y") +
+  theme_minimal()
+
+
+```
+
+```{r}
+# LM Stats
+
+avg_coverage_df <- as.data.frame(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage)
+
+model_wo_B57_VaW6_33_18_no_B73_Oh43 <- lm(Percentage_of_Missing_Data~avg_coverage, data = wo_B57_VaW6_3811_no_B73_Oh43)
+pred_linear <- predict(model_wo_B57_VaW6_33_18_no_B73_Oh43, data.frame(x=wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage))
+
+pred_linear <- predict(model_wo_B57_VaW6_33_18_no_B73_Oh43,x = avg_coverage_df)
+
+
+
+# MSE - linear
+mse_linear <- mean((wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data - pred_linear)^2)
+
+# R^2 - linear
+rss_linear <- sum((wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data - pred_linear)^2)
+tss <- sum((wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data - mean(wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data))^2)
+r_squared_linear <- 1 - rss_linear / tss
+
+```
+```{r}
+cat("Linear Model MSE:", mse_linear, "\n")
+cat("Exponential Model MSE:", mse_exponential, "\n")
+cat("Linear Model R-squared:", r_squared_linear, "\n")
+cat("Exponential Model R-squared:", r_squared_exponential, "\n")
+```
+Compare the two models
+```{r}
+ggplot(data.frame(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage, wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data), aes(wo_B57_VaW6_3811_no_B73_Oh43$avg_coverage, wo_B57_VaW6_3811_no_B73_Oh43$Percentage_of_Missing_Data)) +
+  geom_point() +
+  geom_line(aes(y = pred_linear), color = "blue", linetype = "dashed") +
+  geom_line(aes(y = predict_exp), color = "red") +
+  labs(title = "Linear vs Exponential Model",
+       x = "x",
+       y = "y") +
+  theme_minimal()
+```
+
+
+
+```{r}
+plot(model_wo_B57_VaW6_33_18)
+
+```
+
+#Let's see how removing the outliers has improved our model
+```{r}
+summary(model)
+```
+```{r}
+summary(model_wo_B57)
+```
+```{r}
+summary(model_wo_B57_VaW6)
+```
+```{r}
+summary(model_wo_B57_VaW6_33_18)
+```
+
+# I'm going to settle with the model that excludes B57 and VaW6 because these was little improvement to the model if we also excluded 33-18
+
+#Let's plot it now
+```{r}
+png("./test/lm_perc_missing_data_coverage_wo_2outliers.png", width = 8, height = 6 , res = 400, units = "in")
+ggplot(data = wo_B57_VaW6, aes(x = avg_coverage, y = as.numeric(Percentage_of_Missing_Data)))+
+  geom_point()+
+  geom_smooth(method = "lm")+
+  scale_x_continuous(expand = c(0,0))+
+  scale_y_continuous(expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+  labs(x ="Realized Coverage", y = "Percent Missing Data ")+
+  ylim(0,100)+
+  xlim(0,10)+
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.background = element_rect(fill = "white"),  # Set plot background color to white
+    panel.background = element_rect(fill = "white"),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.ticks = element_line(size = 0.5),  # Customize tick marks
+    axis.ticks.length = unit(0.2, "cm"),
+    axis.text.x = element_text(color="black"),
+    axis.text.y = element_text(color="black"),
+    axis.text = element_text(size=12), 
+    axis.title = element_text(size =14),
+    legend.title = element_text(size = 14),
+    legend.text = element_text(size = 12),
+    plot.margin = margin(t = 1,r = 1, b = 1, l = 1, "cm"))
+# + annotate("text", x = 9, y = 75, label =expression(Adj.~R^2 == 0.280), parse = TRUE, size = 5)
+
+
+dev.off()
+```
+
+```{r}
+# # Regression
+# png("./test/lm_perc_missing_data_coverage.png", width = 8, height = 6 , res = 400, units = "in")
+# ggplot(data = merged_sv_miss_coverage, aes(x = avg_coverage, y = as.numeric(Percentage_of_Missing_Data)))+
+#   geom_point()+
+#   geom_smooth(method = "lm", se = FALSE )
+# dev.off()
+# 
+# 
+# # SV Categories
+# te_equal_sv <- read.table("~/Desktop/github/282/scripts/te_equal_sv_sv_ids.txt")
+# sv_categories <- read.csv("~/Desktop/github/282/scripts/sv_categories.csv", header = TRUE)
+# 
+# te_equal_sv <- te_equal_sv %>% 
+#   rename("sv_id" = V1)
+# 
+# sv_categories$insertion_genotype <-  ifelse(grepl("B73_ins", sv_categories$sv_id), "B73", "Oh43")
+# 
+# merged_df <- merge(te_equal_sv, sv_categories, by = "sv_id")
+# merged_df$insertion_genotype <- ifelse(grepl("B73_ins", merged_df$sv_id), "B73", "Oh43")
+# 
+# 
+# png("./test/tes_categories_B73_Oh43_stacked.png", width = 8, height = 6 , res = 400, units = "in")
+# 
+# ggplot(sv_categories, aes(x = category, fill = insertion_genotype))+
+#   geom_bar() +
+#   labs(title = "Histogram of String Occurrences",
+#        x = "Category",
+#        y = "Count") 
+#   # scale_fill_manual(values = c("A" = "red", "B" = "green", "C" = "blue"))
+# dev.off()
+# 
+# 
+# 
+# 
+# 
+# sum(df_sfs >= 0.5) # 36809
+# 
+# 
+# # Counting the number of variants after MAF (less than 0.1 get filtered out) and missing data filtering (>10% get filtered out)
+# missing_percentage <- rowMeans(is.na(df)) * 100
+# frequency_of_2 <- rowSums(df == 2, na.rm = TRUE) / ncol(df[-1:-3]) * 100
+# result_df <- data.frame(Row = df$V1, Percentage_Missing = missing_percentage)
+# result_df$Frequency_of_2 <- frequency_of_2
+# 
+# nrow(subset(result_df, Percentage_Missing >= 10 & Frequency_of_2 < 5))
+# 
+# nrow(subset(result_df, Percentage_Missing >= 10))
+# nrow(subset(result_df, Frequency_of_2 < 5))
+# 
+# nrow(df)-nrow(subset(result_df, Percentage_Missing > 10 | Frequency_of_2 < 5))
+# 
+# bimbam_all <- read.csv("~/Desktop/github/282/data/bimbam_282_wo_header.csv", header = FALSE)
+# missing_percentage <- rowMeans(is.na(bimbam_all)) * 100
+# frequency_of_2 <- rowSums(bimbam_all[-1:-3] == 2, na.rm = TRUE) / ncol(bimbam_all[-1:-3]) * 100
+# result_bimbam_all <- data.frame(Row = bimbam_all$V1, Percentage_Missing = missing_percentage)
+# result_bimbam_all$Frequency_of_2 <- frequency_of_2
+# 
+# nrow(subset(result_bimbam_all, Percentage_Missing > 10 & Frequency_of_2 < 10))
+# 
+# nrow(subset(result_bimbam_all, Percentage_Missing > 10))
+# nrow(subset(result_bimbam_all, Frequency_of_2 < 10))
+# 
+# nrow(bimbam_all)-nrow(subset(result_bimbam_all, Percentage_Missing > 10 | Frequency_of_2 < 10))
+# 
+# 
+# 
+# 
+# # Loop through each row and calculate the percentage of missing values
+# for (i in 1:nrow(bimbam_all)) {
+#   # Calculate the percentage of missing values in the current row
+#   missing_percentage[i] <- mean(is.na(bimbam_all[i,-3])) * 100
+# }
+# sum(missing_percentage <= 20)
+# 
+# 
+# 
+# 
+# 
+# # df_te_equal_sv_sfs <- sfs(df_te_equal_sv, 2)
+# hist(df_te_equal_sv_sfs)
+
+```
+
+# Linkage Disequilibrium plots
+```{r}
+library(ggforce)
+df <- read.table("./plink_results_SNPs-highest-LD-TE_R2_all_chrs.ld", header = TRUE)
+# df <- read.table("~/Downloads/plink_results_SNPs-highest-LD-TE_R2_all_chrs_5mb.ld", header = TRUE)
+# bimbam_ordered <- read.csv("~/Desktop/github/282/bimbam_282_w_header.csv", header=TRUE)
+df_r2_0.1 <- df[df$R2>0.1,]
+# write.table(df_r2_0.1, "~/Desktop/github/282/ld_SVs_hapmapSNPS_1Mb_r2_greater_than_0.1.csv", sep = ',', row.names=FALSE, col.names=TRUE, quote=FALSE)
+df_r2_0.5 <- df[df$R2>0.5,]
+# write.table(df_r2_0.5, "~/Desktop/github/282/ld_SVs_hapmapSNPS_1Mb_r2_greater_than_0.5.csv", sep = ',', row.names=FALSE, col.names=TRUE, quote=FALSE)
+
+# Number of svs that have < 0.5 R2
+nrow(df) - nrow(df_r2_0.5)
+
+plot_ld <- function(df, variable, bins = 30, title = ''){
+  ggplot(df, aes(x={{variable}}))+
+    geom_histogram(col=I("black"), fill = "grey", linewidth = 0.4)+
+    ylab("Number of SVs with SNP within 1Mb")+
+    xlab(expression(r^2))+
+    ggtitle(title)+
+    scale_x_continuous(breaks = seq(0, 1, by = 0.1), expand = c(0,0))+
+    scale_y_continuous(breaks = seq(0, 3000, by = 500), expand = c(0,0))+#seq(0, 3500, by = 500), expand = c(0,0))+
+    # scale_fill_discrete(name = "Reference Genotype")+
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+          plot.background = element_rect(fill = "white"),  # Set plot background color to white
+          panel.background = element_rect(fill = "white"),
+          panel.border = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          axis.line = element_line(colour = "black"),
+          axis.ticks = element_line(size = 0.5),  # Customize tick marks
+          axis.ticks.length = unit(0.2, "cm"),
+          axis.text.x = element_text(color="black"),
+          axis.text.y = element_text(color="black"),
+          axis.text = element_text(size=12), 
+          axis.title = element_text(size =14),
+          legend.title = element_text(size = 14),
+          legend.text = element_text(size = 12),
+          plot.margin = margin(1,1,1.5,1.2, "cm"))
+  }
+
+plot_ld_0.1 <- plot_ld(df=df_r2_0.1, variable=R2, title=expression("SVs with "~r^2~" greater than 0.1 for SNPs within 1Mb"))
+plot_ld_0.5 <- plot_ld(df=df_r2_0.5, variable=R2, title=expression("SVs with "~r^2~" greater than 0.5 fo r SNPs within 1Mb"))
+plot_highest_ld <- plot_ld(df=df, variable=R2)
+
+
+
+
+plot_highest_ld_zoomed <- plot_highest_ld+
+  facet_zoom(ylim = c(0, 100), 
+             zoom.size = 0.45)
+
+# TE = SV (cateogry 5)
+# te_ld_w_sv_categories <- read.csv("~/Desktop/github/282/te_ld_w_sv_categories.csv")
+te_ld_w_sv_categories_df <- merge(df, sv_categories, by.x = "SNP_A", by.y = "sv_id", all.x = TRUE)
+
+# df_te_equal_sv_w_intersect_tes <- merge(df_te_equal_sv, b73_oh43_intersect_tes[, c("V4", "V8")], by.x = "ID", by.y = "V8", all.x = TRUE)
+
+
+te_equal_sv <- te_ld_w_sv_categories_df %>% 
+  filter(category == "Category_5")
+
+te_equal_sv_ld <- plot_ld(df=te_equal_sv, variable=R2)
+te_equal_sv_ld_plot_highest_ld_zoomed <- te_equal_sv_ld+
+  facet_zoom(ylim = c(0, 100), 
+             zoom.size = 0.45)
+######################
+## Figures for paper ##
+######################
+png("./test/highest_ld_between_SVs_SNPs_within_1Mb.png", width = 8, height = 6 , res = 400, units = "in")
+plot_highest_ld
+dev.off()
+
+png("./test/highest_ld_between_SVs_SNPs_within_1Mb_zoomed.png", width = 8, height = 6 , res = 400, units = "in")
+plot_highest_ld_zoomed
+dev.off()
+
+
+png("./test/TE_equal_SV_highest_ld_between_SVs_SNPs_within_1Mb.png", width = 8, height = 6 , res = 400, units = "in")
+te_equal_sv_ld
+dev.off()
+
+png("./test/TE_equal_SV_highest_ld_between_SVs_SNPs_within_1Mb_zoomed.png", width = 8, height = 6 , res = 400, units = "in")
+te_equal_sv_ld_plot_highest_ld_zoomed
+dev.off()
+
+
+perc_0.1 <- (nrow(df_r2_0.1)/nrow(df) * 100)
+perc_0.5 <- (nrow(df_r2_0.5)/nrow(df) * 100)
+
+perc_ld <- nrow(df)/nrow(bimbam_ordered)*100
+
+# ggarrange(plot_highest_ld, ggarrange(plot_ld_0.1, plot_ld_0.5, ncol = 2), ncol = 1, heights=c(1.5, 1))
+
+
+
+```
