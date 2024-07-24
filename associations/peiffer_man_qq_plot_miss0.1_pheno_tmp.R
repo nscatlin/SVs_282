@@ -247,7 +247,9 @@ if(nrow(sig) > 0){
     dir.create("qq_plots")
   } 
   df_fdr <- as.data.frame(setThreshold(df,method = 'FDR'))
-  manhattan.gemma(df_fdr)+theme_classic()+
+  df_man_plot <- manhattan.gemma(df_fdr)+
+    ggtitle(paste(pheno_dict$get(PHENONUM), "Manhattan Plot", sep = ' '))+
+    theme_classic()+
     theme(plot.title = element_text(hjust = 0.5, vjust = -5, size  = 15, face = "bold"),
           plot.tag = element_text(size = 16),
           axis.title = element_text(size = 15),
@@ -255,29 +257,21 @@ if(nrow(sig) > 0){
           axis.text.x = element_text(color = "black", size = 16),
           axis.text.y = element_text(color = "black", size = 16),
           axis.ticks = element_line(color = "black"))
-  ggtitle(paste(pheno_dict$get(PHENONUM), "Manhattan Plot", sep = ' '))+
-  ggsave("./man_plots/_man_plot.png", df_man_plot, device = "png", width = 10, height = 8)
+  
+  ggsave("./man_plots/PHENONUM_man_plot.png", df_man_plot, device = "png", width = 10, height = 8)
 
   
   qq_plot <- function(df){
-    df <-  df %>% 
-      # colnames(c("SNP", "chr", "pos", "pval"))
-      rename("chr"="CHR",
-             "pval"="P",
-             "pos"="BP")
-    # df$chr <- df$CHR
-    # df$pval <- df$P
-    # df$pos <- df$BP
     
     df_nrow=nrow(df)
     
-    exp.pval=(1:df_nrow-0.5)/df_nrow
+    exp.p_score=(1:df_nrow-0.5)/df_nrow
     
-    exp.pval.log=as.data.frame(-log10(exp.pval))
+    exp.p_score.log=as.data.frame(-log10(exp.p_score))
     
-    var.pval=df$pval[order(df$pval)]
+    var.p_score=df$p_score[order(df$p_score)]
     
-    var.pval.log=as.data.frame(-log10(var.pval))
+    var.p_score.log=as.data.frame(-log10(var.p_score))
     
     N=df_nrow
     
@@ -285,7 +279,7 @@ if(nrow(sig) > 0){
     
     clower=-log10(qbeta(1-0.95,1:N,N-1:N+1))
     
-    df2=cbind(exp.pval.log,var.pval.log,cupper,clower)
+    df2=cbind(exp.p_score.log,var.p_score.log,cupper,clower)
     
     colnames(df2)=c("expected","var","cup","clow")
     
