@@ -1,0 +1,19 @@
+name: gemma
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - _libgcc_mutex=0.1=conda_forge
+  - _openmp_mutex=4.5=2_gnu
+  - gemma=0.98.3=hb4ccc14_0
+  - libgcc-ng=12.1.0=h8d9b700_16
+  - libgfortran-ng=12.1.0=h69a702a_16
+  - libgfortran5=12.1.0=hdcd56e2_16
+  - libgomp=12.1.0=h8d9b700_16
+  - libopenblas=0.3.21=pthreads_h78a6416_2
+  - libstdcxx-ng=12.1.0=ha89aaad_16
+  - libzlib=1.2.12=h166bdaf_2
+  - openblas=0.3.21=pthreads_h320a7e8_2
+  - zlib=1.2.12=h166bdaf_2
+prefix: /mnt/home/catlinna/miniconda3/envs/gemma
