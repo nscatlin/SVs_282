@@ -25,6 +25,10 @@ java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar PE -phred33 -basein SRA_1.fast
 ### Align with HISAT2
 
 ```
+conda activate hisat2
+
+hisat2-build B73_Oh43_all_chrs_pseudoref.fasta B73_Oh43_all_chrs_pseudoref.fasta
+
 hisat2 -q --phred33 --time --no-mixed --new-summary --no-discordant --summary-file ${SAMPLE_NAME}_summary_file.txt --met-stderr -k 1 -X $INSERT_SIZE -p $CPUS -x $HISAT2_INDEX --un ${SAMPLE_NAME}_un_unpaired_failed.fastq --un-conc ${SAMPLE_NAME}_unconc_failed_to_align_concordantly_%.fastq -1 ${FASTQ1} -2 ${FASTQ2} -S ${SAMPLE_NAME}.sam
 ```
 
