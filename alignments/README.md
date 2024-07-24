@@ -1,7 +1,14 @@
 
 ## Alignments
 
-### Download SRAs and trim fastq files
+### Download SRAs
+
+### Trim fastq files using Trimmomatic
+```
+java -jar $EBROOTTRIMMOMATIC/trimmomatic-0.39.jar PE -phred33 -basein SRA_1.fastq -baseout SRA.fq ILLUMINACLIP:TruSeq3-PE-2.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:40
+```
+##### Note: TruSeq3-PE-2.fa can be found [here](https://github.com/timflutre/trimmomatic/blob/master/adapters/TruSeq3-PE-2.fa)
+
 ### Align with HISAT2
 
 ```
