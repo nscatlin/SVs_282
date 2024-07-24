@@ -1,6 +1,10 @@
 
 ## Alignments
 
+### Create file containing SV-present and SV-absent alleles for each polymorphic SV within your ascertainment set
+
+
+
 ### Download SRAs
 
 ### Trim fastq files using Trimmomatic
