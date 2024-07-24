@@ -2,6 +2,15 @@
 ## Alignments
 
 ### Create file containing SV-present and SV-absent alleles for each polymorphic SV within your ascertainment set
+```
+python anchorwave_include_sv_insertion_fastagen.py \
+-t ../data/B73_Oh43_SV_summary_example.tsv \
+-a B73 \
+-b Oh43 \
+-g Zm-B73-REFERENCE-NAM-5.0_chrs.fa \
+-j Zm-Oh43-REFERENCE-NAM-1.0_chr.fa
+```
+#### Note: The above example uses a sample datatype for proof of concept.
 
 
 
