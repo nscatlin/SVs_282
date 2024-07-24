@@ -1,5 +1,6 @@
 
 ## Alignments
+
 ### Download SRAs and trim fastq files
 ### Align with HISAT2
 
