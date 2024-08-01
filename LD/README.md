@@ -57,7 +57,7 @@ for f in {1..10} ; do head -1 hapmap321_gwas_svs_maf0.1_miss0.1_1mb_SNPs_in_all_
 for f in {1..10} ; do Rscript ld_R2_nsc_20240111.R hapmap321_gwas_svs_maf0.1_miss0.1_1mb_SNPs_in_all_SVs_gwas_SNPs_svs.vcf_chr${f}_ld.ld_sedcomma ld_distribution_results ${f} ; done
 ```
 
-### Combine output to make master table of highest $$r^2$$ for each SV
+### Combine output to make master table of highest r$$^2$$ for each SV
 ```
 head -1 plink_results_SNPs-highest-LD-TE_R2_chr3.ld > plink_results_SNPs-highest-LD-TE_R2_allchrs.ld ; for f in {1..10}; do tail -n +2 plink_results_SNPs-highest-LD-TE_R2_chr${f}.ld >> plink_results_SNPs-highest-LD-TE_R2_allchrs.ld; done
 ```
