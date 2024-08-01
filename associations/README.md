@@ -1,4 +1,4 @@
-## GEMMA associations
+# GEMMA associations
 
 ### Load GEMMA
 ```
