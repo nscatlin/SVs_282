@@ -121,9 +121,9 @@ bedtools coverage \
 ### Create table for read depth at SV junctions for SV-present alleles and polymorphic site for SV-absent alleles 
 ```
 python ../../../scripts/python_scripts/difference_reads_spanning_sv_junctions_insertion_point_NAM_genotypes_to_B73_Oh43_insertions.py \
-../B73/B73_reads_align_B73_Oh43_all_alleles_pseudoref_k1_nodiscordant_normal_insert_size_coordsorted_fixmate_markdup_mapq60.bam_split_w_insertion_point.bed_bedtools_coverage_B73_Oh43_left_right_sv_insertionpoint_junctions.bed \
-../Oh43/Oh43_reads_align_B73_Oh43_all_alleles_pseudoref_k1_nodiscordant_normal_insert_size_coordsorted_fixmate_markdup_mapq60.bam_split_w_insertion_point.bed_bedtools_coverage_B73_Oh43_left_right_sv_insertionpoint_junctions.bed \
-33-16_bedtools_coverage_B73_Oh43_left_right_sv_insertionpoint_junctions.bed \
-33-16 \
-> 33-16_bedtools_coverage_B73_Oh43_left_right_sv_insertionpoint_junctions_comparison_table.bed
+../B73/B73_bedtools_coverage_B73_Oh43_left_right_sv_insertionpoint_junctions.bed \
+../Oh43/Oh43_bedtools_coverage_B73_Oh43_left_right_sv_insertionpoint_junctions.bed \
+${SAMPLE_NAME}_bedtools_coverage_B73_Oh43_left_right_sv_insertionpoint_junctions.bed \
+${SAMPLE_NAME} \
+> ${SAMPLE_NAME}_bedtools_coverage_B73_Oh43_left_right_sv_insertionpoint_junctions_comparison_table.bed
 ```
