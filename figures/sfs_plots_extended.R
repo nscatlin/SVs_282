@@ -5,6 +5,28 @@ library(tidyverse)
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
+# SFS
+num_geno_calls = function(x, ploidy){
+  length(x[!is.na(x)])*ploidy
+}
+
+# Input: genotype table with genotype calls varying from 0,1,2,...,ploidy
+# Output: vector of allele frequencies for alternate alleles
+sfs = function(someTable, ploidy){
+  # calculate alternate allele frequency
+  alt_counts = rowSums(someTable[,c(-1:-3)], na.rm = T)
+  
+  # calculate number of genotype calls for each variant
+  num_geno_calls = apply(someTable[,c(-1:-3)], MARGIN = 1, FUN = num_geno_calls, ploidy = ploidy)
+  
+  # calculate alternate allele frequency
+  print("Calculating frequency of alternate alleles...")
+  alt_freq = alt_counts/num_geno_calls
+  result_df = data.frame(key = someTable[, 1], alt_freq = alt_freq)
+  
+  # Return the resulting dataframe
+  return(result_df)
+}
 
 df_w_header <- read.csv("../associations/282_Peiffer2014Genetics_w_header_bimbam.csv", header = TRUE)
 
@@ -95,7 +117,7 @@ ggplot(df_te_equal_sv_sfs, aes(x=alt_freq))+
 
 ## Change the TE Superfamily strings to something nicer for images
 # TE_superfamily_strings<- list(
-#   "Gypsy_LTR_retrotransposon" = "Ty3/Gypsy",
+#   "Gypsy_LTR_retrotransposon" = "Ty3",
 #   "Tc1_Mariner_TIR_transposon" = "Tc1/Mariner",
 #   "hAT_TIR_transposon" = "hAT",
 #   "RTE_LINE_retrotransposon" = "RTE",
@@ -111,7 +133,7 @@ ggplot(df_te_equal_sv_sfs, aes(x=alt_freq))+
 
 df_te_equal_sv_w_intersect_tes_sfs <- df_te_equal_sv_w_intersect_tes_sfs %>%
   mutate(TE_superfamily = case_when(
-    TE_superfamily ==   "Gypsy_LTR_retrotransposon" ~ "Ty3/Gypsy",
+    TE_superfamily ==   "Gypsy_LTR_retrotransposon" ~ "Ty3",
     TE_superfamily == "Tc1_Mariner_TIR_transposon" ~ "Tc1/Mariner",
     TE_superfamily == "hAT_TIR_transposon" ~ "hAT",
     TE_superfamily == "RTE_LINE_retrotransposon" ~ "RTE",
@@ -146,7 +168,7 @@ sorted_categories <- df_te_equal_sv_w_intersect_tes_sfs %>%
   arrange(desc(alt_freq)) %>%
   pull(TE_superfamily)
 
-java_colors <-  c("Ty3/Gypsy" = "#663171",
+java_colors <-  c("Ty3" = "#663171",
                   "Tc1/Mariner" = "#8C345B",
                   "Unknown LTR" = "#B23746",
                   "hAT" = "#D13F34",
